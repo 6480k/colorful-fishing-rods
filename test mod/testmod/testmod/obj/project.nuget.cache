@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "dgSpecHash": "ZU/j+ltaJ7M=",
+  "success": true,
+  "projectFilePath": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Stardew Valley\\Mods\\colorful-fishing-rods\\test mod\\testmod\\testmod\\testmod.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\6480\\.nuget\\packages\\pathoschild.stardew.modbuildconfig\\4.1.1\\pathoschild.stardew.modbuildconfig.4.1.1.nupkg.sha512"
+  ],
+  "logs": []
+}
