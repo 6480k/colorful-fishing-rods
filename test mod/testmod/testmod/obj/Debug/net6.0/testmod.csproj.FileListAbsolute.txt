@@ -1,9 +1,0 @@
-C:\Program Files (x86)\Steam\steamapps\common\Stardew Valley\Mods\colorful-fishing-rods\test mod\testmod\testmod\bin\Debug\net6.0\testmod.deps.json
-C:\Program Files (x86)\Steam\steamapps\common\Stardew Valley\Mods\colorful-fishing-rods\test mod\testmod\testmod\bin\Debug\net6.0\testmod.dll
-C:\Program Files (x86)\Steam\steamapps\common\Stardew Valley\Mods\colorful-fishing-rods\test mod\testmod\testmod\obj\Debug\net6.0\testmod.csproj.AssemblyReference.cache
-C:\Program Files (x86)\Steam\steamapps\common\Stardew Valley\Mods\colorful-fishing-rods\test mod\testmod\testmod\obj\Debug\net6.0\testmod.GeneratedMSBuildEditorConfig.editorconfig
-C:\Program Files (x86)\Steam\steamapps\common\Stardew Valley\Mods\colorful-fishing-rods\test mod\testmod\testmod\obj\Debug\net6.0\testmod.AssemblyInfoInputs.cache
-C:\Program Files (x86)\Steam\steamapps\common\Stardew Valley\Mods\colorful-fishing-rods\test mod\testmod\testmod\obj\Debug\net6.0\testmod.AssemblyInfo.cs
-C:\Program Files (x86)\Steam\steamapps\common\Stardew Valley\Mods\colorful-fishing-rods\test mod\testmod\testmod\obj\Debug\net6.0\testmod.csproj.CoreCompileInputs.cache
-C:\Program Files (x86)\Steam\steamapps\common\Stardew Valley\Mods\colorful-fishing-rods\test mod\testmod\testmod\obj\Debug\net6.0\testmod.sourcelink.json
-C:\Program Files (x86)\Steam\steamapps\common\Stardew Valley\Mods\colorful-fishing-rods\test mod\testmod\testmod\obj\Debug\net6.0\testmod.dll

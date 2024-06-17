@@ -1,0 +1,43 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>ColorfulFishingRods</name>
+    </assembly>
+    <members>
+        <member name="T:ColorfulFishingRods.Framework.ModConfig">
+            <summary>
+            The config class for this mod.
+            </summary>
+        </member>
+        <member name="F:ColorfulFishingRods.Framework.ModConfig.Map">
+            <summary>
+            A map of colors and overrides.
+            </summary>
+        </member>
+        <member name="T:ColorfulFishingRods.ModEntry">
+            <inheritdoc />
+        </member>
+        <member name="M:ColorfulFishingRods.ModEntry.Entry(StardewModdingAPI.IModHelper)">
+            <inheritdoc />
+        </member>
+        <member name="T:ColorfulFishingRods.I18n">
+            <summary>Get translations from the mod's <c>i18n</c> folder.</summary>
+            <remarks>This is auto-generated from the <c>i18n/default.json</c> file when the project is compiled.</remarks>
+        </member>
+        <member name="F:ColorfulFishingRods.I18n.Translations">
+            <summary>The mod's translation helper.</summary>
+        </member>
+        <member name="M:ColorfulFishingRods.I18n.Init(StardewModdingAPI.ITranslationHelper)">
+            <summary>Construct an instance.</summary>
+            <param name="translations">The mod's translation helper.</param>
+        </member>
+        <member name="M:ColorfulFishingRods.I18n.NoTranslations">
+            <summary>Get a translation equivalent to "empty".</summary>
+        </member>
+        <member name="M:ColorfulFishingRods.I18n.GetByKey(System.String,System.Object)">
+            <summary>Get a translation by its key.</summary>
+            <param name="key">The translation key.</param>
+            <param name="tokens">An object containing token key/value pairs. This can be an anonymous object (like <c>new { value = 42, name = "Cranberries" }</c>), a dictionary, or a class instance.</param>
+        </member>
+    </members>
+</doc>
