@@ -3,8 +3,6 @@ using System.Text;
 
 using AtraBase.Collections;
 using AtraBase.Toolkit;
-using AtraBase.Toolkit.Extensions;
-using AtraBase.Toolkit.StringHandler;
 
 using AtraShared.Caching;
 using AtraShared.ConstantsAndEnums;
@@ -12,7 +10,9 @@ using AtraShared.Utils.Extensions;
 using AtraShared.Utils.Shims;
 using AtraShared.Wrappers;
 
-using StardewValley.TerrainFeatures;
+using StardewValley.GameData.Crops;
+using StardewValley.GameData.Objects;
+using StardewValley.TokenizableStrings;
 
 namespace LastDayToPlantRedux.Framework;
 
@@ -25,76 +25,77 @@ namespace LastDayToPlantRedux.Framework;
 [SuppressMessage("StyleCop.CSharp.OrderingRules", "SA1202:Elements should be ordered by access", Justification = "Keeping like methods together.")]
 internal static class CropAndFertilizerManager
 {
-    private static readonly TickCache<bool> HasStocklist = new(() => Game1.MasterPlayer.hasOrWillReceiveMail("PierreStocklist"));
+    private static readonly TickCache<bool> HasStocklist = new(static () => Game1.MasterPlayer.hasOrWillReceiveMail("PierreStocklist"));
 
     // Map conditions to the number of days it takes to grow a crop, per season.
-    private static readonly Dictionary<CropCondition, Dictionary<int, int>>[] DaysPerCondition = new Dictionary<CropCondition, Dictionary<int, int>>[4]
-    {
-        new(),
-        new(),
-        new(),
-        new(),
-    };
+    private static readonly Dictionary<CropCondition, Dictionary<string, int>>[] DaysPerCondition =
+    [
+        [],
+        [],
+        [],
+        [],
+    ];
 
     /// <summary>
     /// a mapping of fertilizers to a HoeDirt that has them.
     /// </summary>
-    private static readonly Dictionary<int, DummyHoeDirt> Dirts = new();
+    /// <remarks>string.Empty is used for "no fertilizer"</remarks>
+    private static readonly Dictionary<string, DummyHoeDirt> Dirts = [];
 
     /// <summary>
     /// a cache of crop data.
     /// </summary>
-    private static Dictionary<int, CropEntry> crops = new();
+    private static Dictionary<string, CropEntry> crops = [];
 
     /// <summary>
     /// a mapping of fertilizers to their localized names.
     /// </summary>
-    private static Dictionary<int, string> fertilizers = new();
+    private static Dictionary<string, string> fertilizers = [];
 
     // the inverse of DaysPerCondition;
-    private static readonly Lazy<Dictionary<int, List<KeyValuePair<CropCondition, int>>>?>[] LastGrowthPerCrop
-        = new Lazy<Dictionary<int, List<KeyValuePair<CropCondition, int>>>?>[]
-        {
+    private static readonly Lazy<Dictionary<string, List<KeyValuePair<CropCondition, int>>>?>[] LastGrowthPerCrop
+        =
+        [
             new(() => GenerateReverseMap(0)),
             new(() => GenerateReverseMap(1)),
             new(() => GenerateReverseMap(2)),
             new(() => GenerateReverseMap(3)),
-        };
+        ];
 
     private static bool cropsNeedRefreshing = true;
     private static bool fertilizersNeedRefreshing = true;
     private static bool hadStocklistLastCheck = false;
     private static bool requiresReset = true;
 
-    [SuppressMessage("StyleCop.CSharp.NamingRules", "SA1313:Parameter names should begin with lower-case letter", Justification = "StyleCop doesn't understand records.")]
-    private record CropEntry(StardewSeasons Seasons, string GrowthData);
+    [SuppressMessage("StyleCop.CSharp.NamingRules", "SA1313:Parameter names should begin with lower-case letter", Justification = StyleCopErrorConsts.IsRecord)]
+    private readonly record struct CropEntry(StardewSeasons Seasons, List<int> GrowthData);
 
-    [SuppressMessage("StyleCop.CSharp.NamingRules", "SA1313:Parameter names should begin with lower-case letter", Justification = "StyleCop doesn't understand records.")]
-    private record CropCondition(Profession Profession, int Fertilizer);
+    [SuppressMessage("StyleCop.CSharp.NamingRules", "SA1313:Parameter names should begin with lower-case letter", Justification = StyleCopErrorConsts.IsRecord)]
+    private readonly record struct CropCondition(Profession Profession, string? Fertilizer);
 
     #region API
 
-    /// <inheritdoc cref="ILastDayToPlantAPI.GetDays(Profession, int, int, StardewSeasons)"/>
-    internal static int? GetDays(Profession profession, int fertilizer, int crop, StardewSeasons season)
+    /// <inheritdoc cref="ILastDayToPlantAPI.GetDays(Profession, string, string, StardewSeasons)"/>
+    internal static int? GetDays(Profession profession, string fertilizer, string crop, StardewSeasons season)
     {
         if (season.CountSeasons() != 1)
         {
             return null;
         }
 
-        var seasonIndex = season.ToSeasonIndex();
-        var seasonDict = DaysPerCondition[seasonIndex];
+        int seasonIndex = season.ToSeasonIndex();
+        Dictionary<CropCondition, Dictionary<string, int>> seasonDict = DaysPerCondition[seasonIndex];
 
         // check with specific fertilizer.
-        CropCondition? key = new(profession, fertilizer);
-        if (seasonDict.TryGetValue(key, out Dictionary<int, int>? daysDict)
-            && daysDict.TryGetValue(crop, out var days))
+        CropCondition key = new(profession, fertilizer);
+        if (seasonDict.TryGetValue(key, out Dictionary<string, int>? daysDict)
+            && daysDict.TryGetValue(crop, out int days))
         {
             return days;
         }
 
         // check with no fertilizer.
-        key = new(profession, 0);
+        key = new(profession, null);
         if (seasonDict.TryGetValue(key, out daysDict)
             && daysDict.TryGetValue(crop, out days))
         {
@@ -103,36 +104,32 @@ internal static class CropAndFertilizerManager
         return null;
     }
 
-    /// <inheritdoc cref="ILastDayToPlantAPI.GetAll(Profession, int, StardewSeasons)"/>
-    internal static IReadOnlyDictionary<int, int>? GetAll(Profession profession, int fertilizer, StardewSeasons season)
+    /// <inheritdoc cref="ILastDayToPlantAPI.GetAll(Profession, string, StardewSeasons)"/>
+    internal static IReadOnlyDictionary<string, int>? GetAll(Profession profession, string fertilizer, StardewSeasons season)
     {
         if (season.CountSeasons() != 1)
         {
             return null;
         }
 
-        var seasonIndex = season.ToSeasonIndex();
-        var seasonDict = DaysPerCondition[seasonIndex];
+        int seasonIndex = season.ToSeasonIndex();
+        Dictionary<CropCondition, Dictionary<string, int>> seasonDict = DaysPerCondition[seasonIndex];
 
-        CropCondition? key = new(profession, fertilizer);
-        if (seasonDict.TryGetValue(key, out var daysDict))
-        {
-            return new ReadOnlyDictionary<int, int>(daysDict);
-        }
-        return null;
+        CropCondition key = new(profession, fertilizer);
+        return seasonDict.TryGetValue(key, out Dictionary<string, int>? daysDict) ? new ReadOnlyDictionary<string, int>(daysDict) : null;
     }
 
-    /// <inheritdoc cref="ILastDayToPlantAPI.GetConditionsPerCrop(int)"/>
-    internal static KeyValuePair<KeyValuePair<Profession, int>, int>[]? GetConditionsPerCrop(int crop, StardewSeasons season)
+    /// <inheritdoc cref="ILastDayToPlantAPI.GetConditionsPerCrop(string, StardewSeasons)"/>
+    internal static KeyValuePair<KeyValuePair<Profession, string?>, int>[]? GetConditionsPerCrop(string crop, StardewSeasons season)
     {
         if (season.CountSeasons() != 1)
         {
             return null;
         }
 
-        if (LastGrowthPerCrop[season.ToSeasonIndex()].Value?.TryGetValue(crop, out var val) == true)
+        if (LastGrowthPerCrop[season.ToSeasonIndex()].Value?.TryGetValue(crop, out List<KeyValuePair<CropCondition, int>>? val) == true)
         {
-            return val.Select((kvp) => new KeyValuePair<KeyValuePair<Profession, int>, int>(new KeyValuePair<Profession, int>(kvp.Key.Profession, kvp.Key.Fertilizer), kvp.Value))
+            return val.Select((kvp) => new KeyValuePair<KeyValuePair<Profession, string?>, int>(new KeyValuePair<Profession, string?>(kvp.Key.Profession, kvp.Key.Fertilizer), kvp.Value))
                       .OrderBy((kvp) => kvp.Value)
                       .ToArray();
         }
@@ -140,7 +137,7 @@ internal static class CropAndFertilizerManager
     }
 
     /// <inheritdoc cref="ILastDayToPlantAPI.GetTrackedCrops"/>
-    internal static int[]? GetTrackedCrops() => LastGrowthPerCrop.SelectMany(a => a.Value?.Keys ?? Enumerable.Empty<int>()).ToArray();
+    internal static string[]? GetTrackedCrops() => LastGrowthPerCrop.SelectMany(a => a.Value?.Keys ?? Enumerable.Empty<string>()).ToArray();
     #endregion
 
     #region processing
@@ -178,35 +175,29 @@ internal static class CropAndFertilizerManager
            .Append("^^");
         bool hasCrops = false;
 
-        foreach ((CropCondition condition, Dictionary<int, int> cropvalues) in DaysPerCondition[season.ToSeasonIndex()])
+        foreach ((CropCondition condition, Dictionary<string, int> cropvalues) in DaysPerCondition[season.ToSeasonIndex()])
         {
             if (cropvalues.Count == 0)
             {
                 continue;
             }
 
-            foreach ((int index, int days) in cropvalues)
+            foreach ((string index, int days) in cropvalues)
             {
                 if (days != daysRemaining)
                 {
                     continue;
                 }
 
-                if (!Game1Wrappers.ObjectInfo.TryGetValue(index, out string? data))
+                if (!Game1Wrappers.ObjectData.TryGetValue(index, out ObjectData? data))
                 {
                     continue;
                 }
 
-                ReadOnlySpan<char> name = data.GetNthChunk('/', SObject.objectInfoDisplayNameIndex);
-
-                if (name.Length == 0)
-                {
-                    continue;
-                }
                 hasCrops = true;
 
-                sb.Append(I18n.CropInfo(name.ToString(), days));
-                if (condition.Fertilizer != 0)
+                sb.Append(I18n.CropInfo(data.Name, days));
+                if (condition.Fertilizer is not null)
                 {
                     sb.Append(I18n.CropInfo_Fertilizer(fertilizers[condition.Fertilizer]));
                 }
@@ -250,7 +241,7 @@ internal static class CropAndFertilizerManager
         {
             if (DaysPerCondition[seasonIndex] is null)
             {
-                DaysPerCondition[seasonIndex] = new();
+                DaysPerCondition[seasonIndex] = [];
             }
             else
             {
@@ -262,7 +253,7 @@ internal static class CropAndFertilizerManager
         ModEntry.ModMonitor.DebugOnlyLog($"Checking for {season} - next is {nextSeason}", LogLevel.Info);
 
         // load relevant crops.
-        List<int>? currentCrops = crops.Where(c => c.Value.Seasons.HasFlag(season) && !c.Value.Seasons.HasFlag(nextSeason) && FilterCropsToUserConfig(c.Key))
+        List<string>? currentCrops = crops.Where(c => c.Value.Seasons.HasFlag(season) && !c.Value.Seasons.HasFlag(nextSeason) && FilterCropsToUserConfig(c.Key))
                                 .Select(c => c.Key)
                                 .ToList();
         ModEntry.ModMonitor.DebugOnlyLog($"Found {currentCrops.Count} relevant crops");
@@ -303,23 +294,23 @@ SUCCESS:
         LastGrowthPerCrop[seasonIndex] = new(() => GenerateReverseMap(seasonIndex));
     }
 
-    private static Dictionary<int, List<KeyValuePair<CropCondition, int>>>? GenerateReverseMap(int season)
+    private static Dictionary<string, List<KeyValuePair<CropCondition, int>>>? GenerateReverseMap(int season)
     {
-        var seasonDict = DaysPerCondition[season];
+        Dictionary<CropCondition, Dictionary<string, int>> seasonDict = DaysPerCondition[season];
         if (seasonDict?.Count is 0 or null)
         {
             return null;
         }
 
-        var result = new Dictionary<int, List<KeyValuePair<CropCondition, int>>>();
+        Dictionary<string, List<KeyValuePair<CropCondition, int>>> result = [];
 
-        foreach ((CropCondition condition, Dictionary<int, int> dictionary) in seasonDict)
+        foreach ((CropCondition condition, Dictionary<string, int> dictionary) in seasonDict)
         {
-            foreach (var (crop, days) in dictionary)
+            foreach ((string crop, int days) in dictionary)
             {
-                if (!result.TryGetValue(crop, out var pairs))
+                if (!result.TryGetValue(crop, out List<KeyValuePair<CropCondition, int>>? pairs))
                 {
-                    result[crop] = pairs = new();
+                    result[crop] = pairs = [];
                 }
 
                 pairs.Add(new(condition, days));
@@ -329,28 +320,29 @@ SUCCESS:
         return result;
     }
 
-    private static void ProcessForProfession(Profession profession, List<int> currentCrops, int seasonIndex, Farmer? farmer = null)
+    private static void ProcessForProfession(Profession profession, List<string> currentCrops, int seasonIndex, Farmer? farmer = null)
     {
         if (farmer is null)
         {
             ModEntry.ModMonitor.Log($"Could not find farmer for {profession}, continuing.");
             return;
         }
-        var seasonDict = DaysPerCondition[seasonIndex];
+        Dictionary<CropCondition, Dictionary<string, int>> seasonDict = DaysPerCondition[seasonIndex];
 
-        if (!seasonDict.TryGetValue(new CropCondition(profession, 0), out Dictionary<int, int>? unfertilized))
+        if (!seasonDict.TryGetValue(new CropCondition(profession, null), out Dictionary<string, int>? unfertilized))
         {
-            unfertilized = new();
-            seasonDict[new CropCondition(profession, 0)] = unfertilized;
+            seasonDict[new CropCondition(profession, null)] = unfertilized = [];
         }
 
+        Farm farm = Game1.getFarm();
+
         // set up unfertilized.
-        foreach (int crop in currentCrops)
+        foreach (string crop in currentCrops)
         {
             if (!unfertilized.ContainsKey(crop))
             {
-                Crop c = new(crop, 0, 0);
-                DummyHoeDirt? dirt = Dirts[0];
+                Crop c = new(crop, 0, 0, farm);
+                DummyHoeDirt? dirt = Dirts[string.Empty];
                 dirt.crop = c;
                 dirt.nearWaterForPaddy.Value = c.isPaddyCrop() ? 1 : 0;
                 int? days = dirt.CalculateTimings(farmer);
@@ -362,14 +354,13 @@ SUCCESS:
             }
         }
 
-        foreach (int fertilizer in fertilizers.Keys)
+        foreach (string fertilizer in fertilizers.Keys)
         {
             CropCondition condition = new(profession, fertilizer);
 
-            if (!seasonDict.TryGetValue(condition, out Dictionary<int, int>? dict))
+            if (!seasonDict.TryGetValue(condition, out Dictionary<string, int>? dict))
             {
-                dict = new();
-                seasonDict[condition] = dict;
+                seasonDict[condition] = dict = [];
             }
             else if (!InventoryWatcher.HasSeedChanges)
             {
@@ -378,11 +369,11 @@ SUCCESS:
                 continue;
             }
 
-            foreach (int crop in currentCrops)
+            foreach (string crop in currentCrops)
             {
                 if (!dict.ContainsKey(crop))
                 {
-                    Crop c = new(crop, 0, 0);
+                    Crop c = new(crop, 0, 0, farm);
                     DummyHoeDirt? dirt = Dirts[fertilizer];
                     dirt.crop = c;
                     dirt.nearWaterForPaddy.Value = c.isPaddyCrop() ? 1 : 0;
@@ -400,10 +391,10 @@ SUCCESS:
         }
     }
 
-    private static bool FilterCropsToUserConfig(int crop)
+    private static bool FilterCropsToUserConfig(string crop)
     {
         // mixed seeds.
-        if (crop == 770)
+        if (crop == "770")
         {
             return false;
         }
@@ -419,7 +410,7 @@ SUCCESS:
             return false;
         }
 
-        if (!Game1Wrappers.ObjectInfo.TryGetValue(crop, out string? data))
+        if (!Game1Wrappers.ObjectData.TryGetValue(crop, out ObjectData? data))
         {
             return false;
         }
@@ -435,11 +426,11 @@ SUCCESS:
                     goto case CropOptions.All;
                 }
 
-                if (crop < 3000)
+                if (Utility.IsLegacyIdBetween(crop, 0, 3000))
                 {
-                    return Game1.year > 1 || !(crop is 476 or 485 or 489); // the year2 seeds.
+                    return Game1.year > 1 || !(crop is "476" or "485" or "489"); // the year2 seeds.
                 }
-                string? name = data.GetNthChunk('/', 0).ToString();
+                string? name = data.Name;
                 try
                 {
                     if (JsonAssetsShims.IsAvailableSeed(name))
@@ -449,7 +440,7 @@ SUCCESS:
                 }
                 catch (Exception ex)
                 {
-                    ModEntry.ModMonitor.Log($"Failed while trying to check event preconditions: {ex}", LogLevel.Error);
+                    ModEntry.ModMonitor.LogError("checking event preconditions", ex);
                     return false;
                 }
 
@@ -457,7 +448,7 @@ SUCCESS:
             }
             case CropOptions.Seen:
             {
-                string? name = data.GetNthChunk('/', 0).ToString();
+                string? name = data.Name;
                 return InventoryWatcher.Model?.Seeds?.Contains(name) != false;
             }
             default:
@@ -491,31 +482,19 @@ SUCCESS:
 
         cropsNeedRefreshing = false;
 
-        Dictionary<int, CropEntry> ret = new();
+        Dictionary<string, CropEntry> ret = [];
 
-        Dictionary<int, string> cropData = Game1.content.Load<Dictionary<int, string>>(AssetManager.CropName.BaseName);
-        foreach ((int index, string vals) in cropData)
+        Dictionary<string, CropData> cropData = DataLoader.Crops(Game1.content);
+        foreach ((string index, CropData? vals) in cropData)
         {
-            ReadOnlySpan<char> seasons = vals.GetNthChunk('/', 1).Trim();
-
             StardewSeasons seasonEnum = StardewSeasons.None;
-            foreach (SpanSplitEntry season in seasons.StreamSplit(null, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            foreach (Season s in vals.Seasons)
             {
-                if (StardewSeasonsExtensions.TryParse(season, value: out StardewSeasons s, ignoreCase: true))
-                {
-                    seasonEnum |= s;
-                }
-                else
-                {
-                    ModEntry.ModMonitor.Log($"Crop {index} - {vals} seems to have unparseable season data, skipping", LogLevel.Warn);
-                    goto breakcontinue;
-                }
+                seasonEnum |= s.ConvertFromGameSeason();
             }
 
-            string? growthData = vals.GetNthChunk('/', 0).Trim().ToString();
+            List<int> growthData = vals.DaysInPhase;
             ret[index] = new CropEntry(seasonEnum, growthData);
-breakcontinue:
-            ;
         }
 
         bool changed = !ret.IsEquivalentTo(crops);
@@ -535,38 +514,29 @@ breakcontinue:
         }
         fertilizersNeedRefreshing = false;
 
-        Dictionary<int, string> ret = new();
+        Dictionary<string, string> ret = [];
 
-        DummyHoeDirt dirt = new(0);
+        DummyHoeDirt dirt = new("null");
 
-        foreach ((int index, string vals) in Game1Wrappers.ObjectInfo)
+        foreach ((string? index, ObjectData? data) in Game1Wrappers.ObjectData)
         {
-            ReadOnlySpan<char> catName = vals.GetNthChunk('/', SObject.objectInfoTypeIndex);
-            int spaceIndx = catName.GetLastIndexOfWhiteSpace();
-            if (spaceIndx < 0)
+            if (data.Category is not SObject.fertilizerCategory)
             {
                 continue;
             }
 
-            if (!int.TryParse(catName[(spaceIndx + 1)..], out int category) ||
-                (category is not SObject.fertilizerCategory))
+            dirt.fertilizer.Value = null;
+            if (!dirt.plant(index, Game1.player, true))
             {
                 continue;
             }
 
-            dirt.fertilizer.Value = HoeDirt.noFertilizer;
-            if (!dirt.plant(index, 0, 0, Game1.player, true, Game1.getFarm()))
+            if (!IsAllowedFertilizer(index, data.Name))
             {
                 continue;
             }
 
-            string? name = vals.GetNthChunk('/', SObject.objectInfoNameIndex).Trim().ToString();
-            if (!IsAllowedFertilizer(index, name))
-            {
-                continue;
-            }
-
-            ret[index] = name;
+            ret[index] = TokenParser.ParseText(data.DisplayName);
         }
 
         bool changed = !ret.IsEquivalentTo(fertilizers);
@@ -582,9 +552,9 @@ breakcontinue:
     {
         Dirts.Clear();
 
-        Dirts[0] = new(0);
+        Dirts[string.Empty] = new(null);
 
-        foreach (int fert in fertilizers.Keys)
+        foreach (string fert in fertilizers.Keys)
         {
             Dirts[fert] = new(fert);
         }
@@ -592,7 +562,7 @@ breakcontinue:
         ModEntry.ModMonitor.DebugOnlyLog($"Set up {Dirts.Count} hoedirts");
     }
 
-    private static bool IsAllowedFertilizer(int id, string name)
+    private static bool IsAllowedFertilizer(string id, string name)
     {
         if (ModEntry.Config.GetAllowedFertilizers().Contains(id)
             || AssetManager.AllowedFertilizers.Contains(id))

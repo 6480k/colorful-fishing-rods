@@ -1,4 +1,6 @@
-﻿using AtraShared.Integrations.GMCMAttributes;
+﻿// Ignore Spelling: Crystalarium Bobbers Dressup
+
+using AtraShared.Integrations.GMCMAttributes;
 using StardewModdingAPI.Utilities;
 using StardewValley.Locations;
 
@@ -16,11 +18,6 @@ internal sealed class ModConfig
     public bool Enabled { get; set; } = true;
 
     #region rugs
-
-    /// <summary>
-    /// Gets or sets a value indicating whether or not rugs should not be removed from under things.
-    /// </summary>
-    public bool PreventRugRemoval { get; set; } = true;
 
     /// <summary>
     /// Gets or sets a value indicating whether or not I should be able to place rugs outside.
@@ -44,17 +41,23 @@ internal sealed class ModConfig
     /// <summary>
     /// Gets or sets a value indicating whether or not to prevent the removal of items from a table.
     /// </summary>
+    [GMCMSection("Placement", 0)]
     public bool PreventRemovalFromTable { get; set; } = true;
 
     /// <summary>
     /// Gets or sets a value indicating whether grass should be placed under objects.
     /// </summary>
+    [GMCMSection("Placement", 0)]
     public bool PlaceGrassUnder { get; set; } = true;
 
     /// <summary>
     /// Gets or sets a value indicating whether jukeboxes should be playable everywhere.
     /// </summary>
+    [GMCMSection("Placement", 0)]
     public bool JukeboxesEverywhere { get; set; } = true;
+
+    [GMCMSection("Placement", 0)]
+    public bool ChestSwap { get; set; } = true;
 
     /// <summary>
     /// Gets or sets a value indicating whether golden coconuts should be allowed to appear off the island, if you've cracked at least one before.
@@ -140,6 +143,7 @@ internal sealed class ModConfig
     /// <summary>
     /// Gets or sets keybind to use to remove an item from a table.
     /// </summary>
+    [GMCMSection("Placement", 0)]
     public KeybindList FurniturePlacementKey { get; set; } = KeybindList.Parse("LeftShift + Z");
 
     /// <summary>
@@ -150,6 +154,7 @@ internal sealed class ModConfig
     /// <summary>
     /// Gets or sets a value indicating whether SObjects that are bombed that are forage should be saved.
     /// </summary>
+    [GMCMSection("Bombs", 50)]
     public bool SaveBombedForage { get; set; } = false;
 
     /// <summary>
@@ -161,7 +166,18 @@ internal sealed class ModConfig
     /// <summary>
     /// Gets or sets a value indicating whether or not napalm rings should affect safe areas.
     /// </summary>
+    [GMCMSection("Bombs", 50)]
     public bool NapalmInSafeAreas { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets a value indicating the behavior for crystalaria.
+    /// </summary>
+    public CrystalariumBehavior CrystalariumBehavior { get; set; } = CrystalariumBehavior.Vanilla;
+
+    /// <summary>
+    /// Gets or sets a value indicating the behavior for signs.
+    /// </summary>
+    public SignBehavior SignBehavior { get; set; } = SignBehavior.Vanilla;
 
     /// <summary>
     /// Gets or sets a value indicating whether or not to confirm bomb placement in safe areas.
@@ -228,20 +244,21 @@ internal sealed class ModConfig
 
         bool changed = false;
 
-        Utility.ForAllLocations(loc =>
+        Utility.ForEachLocation(loc =>
         {
             if (loc is SlimeHutch or Town or IslandWest || loc.IsFarm || loc.IsGreenhouse)
             {
-                changed |= this.SafeLocationMap.TryAdd(loc.NameOrUniqueName, IsSafeLocationEnum.Safe);
+                changed |= this.SafeLocationMap.TryAdd(loc.Name, IsSafeLocationEnum.Safe);
             }
             else if (loc is MineShaft or VolcanoDungeon or BugLand)
             {
-                changed |= this.SafeLocationMap.TryAdd(loc.NameOrUniqueName, IsSafeLocationEnum.Dangerous);
+                changed |= this.SafeLocationMap.TryAdd(loc.Name, IsSafeLocationEnum.Dangerous);
             }
             else
             {
-                changed |= this.SafeLocationMap.TryAdd(loc.NameOrUniqueName, IsSafeLocationEnum.Dynamic);
+                changed |= this.SafeLocationMap.TryAdd(loc.Name, IsSafeLocationEnum.Dynamic);
             }
+            return true;
         });
 
         return changed;

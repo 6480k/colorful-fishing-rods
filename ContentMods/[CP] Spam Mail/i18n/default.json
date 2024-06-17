@@ -1,0 +1,284 @@
+{
+    /***********************
+    * Configuration
+    * **********************/
+    "config.ExpectedPlayTime.name": "Expected Play Time",
+
+    /***********************
+    * Circus
+    ***********************/
+    "CircusMail.Title": "The Greatest Show On Earth",
+    "CircusMail.Text": "Two weeks only, the Cirque de La Lune's in town! Featuring death-defying acrobatics, ferocious tamed lions, mind-bending magic shows, and, of course, clowns!^^Visit us in Zuzu City while we're here!",
+
+    "vincent-circus-before": "Mom won't bring me to the circus.$s",
+
+    /*************************
+    * Aquarium
+    *************************/
+    "Aquarium.Title": "Zuzu City Aquarium Presents: Denizens of the Deep!",
+    "Aquarium.Text.1": "Ever interested in the crazy weird creatures that inhabit the depths of the ocean? Now you have an opportunity to meet them! For two weeks only, our Denizens of the Deep exhibit will let you see anglerfish, rattails, and even vampire squid! Get to know the extremophiles that survive despite crushing pressure and frigid waters!",
+
+    "Aquarium.Text.2": "Brought to you by Fahrenheit! No one's more extremmeeee than Fahrenheit Energy Drinks!",
+
+    "vincent-aquarium": "Miss Penny's gonna bring Jas and me to the Aquarium next Friday!$h#$b#I'm so excited.$h",
+
+    "demetrius-aquarium": "I wonder, @, if it's ethical to keep such intelligent creatures such as orca in an aquarium?",
+
+    /*************************
+    * Zoo
+    *************************/
+    "Zoo.Title": "New Exhibits at the Zuzu City Zoo!",
+    "Zoo.Text": "Just for this summer, we've got some panda visitors! Bring your kids to meet these lovely fluffy critters before they go extinct.",
+
+    "Zoo2.Title": "Meet our new Eagle Ambassador!",
+    "Zoo2.Text": "We'd like to introduce you to Sparrow, our new eagle ambassador! Come and watch us feed her fish and learn about conservation efforts.",
+
+    "jas-zoo2": "Miss Penny took us to the zoo! We got to see the lions.",
+
+    /***********************
+    * Medieval Times
+    ***********************/
+
+    // anyone else remember Medieval Times?
+    "Castle.Title": "Jousting, Knights, and Festivities!",
+    "Castle.Text": "Come see an unique attraction in Castle Times! Featuring dynamic jousts, expert horsemanship, and a feast fit for kings! Only 1000$ per person!",
+
+    /*********************
+    * Water Park
+    *********************/
+    "WaterPark.Title": "Get Wet and Wild With Us!",
+    "WaterPark.Text": "Brand new to Zuzu City, welcome to AquaThrills! Featuring a turbulent lazy river, refurbished rides, and a pool we swear we got inspected this year!",
+
+    "jodi-waterpark": "Sam keeps asking me to bring him to that water park, but it really doesn't seem safe.",
+
+    /**************************
+    * Joja mailers
+    ****************************/
+
+    "JojaMail.Summer.Title": "It's Summer!",
+    "JojaMail.Summer.Text.1": "Summer's the best, isn't it? Pools, ice cream, and, best of all, NO SCHOOL. Come to Joja for our Galactic Ice Cream (limited edition!), freezy pops, and edible pool noodles!",
+
+    "JojaMail.Fall.Title": "Back to School!",
+    "JojaMail.Fall.Text.1": "Get all the school supplies your child needs cheap from Joja! Loose leaf paper, binders, and new spirals all around!",
+
+    "abby-jojafall": "Ugh, classes again, @.$s#$b#I'd much rather have fun exploring.",
+
+    "JojaMail.Winter.Title": "Hot Chocolate For All!",
+    "JojaMail.Winter.Text.1": "Come in to your local JojaMart, get a free cup of hot cocoa on us!",
+    "JojaMail.Winter.Text.2": "Required minimum 2000$ purchase to qualify for free hot cocoa.",
+
+    "haley-hot-cocoa-true": "Gosh, where does a girl have to go to get a nice cup of hot coffee around here?",
+    "haley-hot-cocoa-false": "Hmmm, I wonder if Joja carries peppermint mochas? I saw that they're advertising free hot chocolate...$h",
+
+    "JojaMail.VirtualPet.Title": "Introooducing....Virtual Pets!",
+    "JojaMail.VirtualPet.Text": "Real pets too much work? Rock pets insufficiently interesting? Get your child a nice digital pet! They won't die if you forget to feed them!",
+
+    "JojaMail.Sneakers.Title": "New Light Up Sneakers!",
+    "JojaMail.Sneakers.Text.1": "Stride into the new school year with our fashionable light up sneakers! Now 30 percent off!",
+    "JojaMail.Sneakers.Text.2": "One per person. Returns not accepted. These products do not carry a warranty. Void where illegal.",
+
+    "vincent-sneakers": "Hey, @! Look at these cool new sneakers mom got me! They light up!$h#$b#Oh, one broke already.$s",
+
+    "JojaMail.SelfStirring.Title": "Introducing...The Self-Stirring Mug!",
+    "JojaMail.SelfStirring.Text.1": "Ever been too lazy to stir your coffee in the morning? Well, Joja has your back! Introducing our new self-stirring coffee mug! It'll do the work for you!",
+    "JojaMail.SelfStirring.Text.2": "Requires six batteries. Not dishwasher safe. Should not be used with liquids over 75 degrees C",
+
+    "JojaMail.FunnelCakes.Title": "We've Got Funnel Cakes For Cheap!",
+    "JojaMail.FunnelCakes.Text": "Funnel cakes, the best part of fall...now get them from the frozen aisle in your closest JojaMart! 40% off coupon attached.",
+
+    "JojaMail.Chocolate.Title": "50% Off Chocolate!",
+    "JojaMail.Chocolate.Text.1": "It's nearly the Egg Festival, and you'll certainly want some chocolate to hand out to the kids...or maybe take for yourself. So. Chocolate from a master chocolatier with a hundred years of history who definitely has NOT been skimping on ingredient quality lately is on sale!",
+    "JojaMail.Chocolate.Text.2": "Look, even if you don't have a child near you, don't you want some cheap chocolate for the next time you have a bad day?",
+
+    "jodi-jojachocolate": "Is it just me, or do these chocolates I ordered taste...off?",
+
+    "JojaMail.PlantBased.Title": "Try Our New Plant-Based Foods!",
+    "JojaMail.PlantBased.Text": "Seaweed chips, tofu burgers, and bean-based fake fish, feel better about yourself AND the environment when you buy these plant-based snacks!",
+
+    "demetrius-plant-based": "You know, @, I've gotta take issue with this ad for plant-based foods.#$b#Algae is not a plant and Joja should know that already.",
+
+    "emily-plant-based": "I'm glad that the big corporations are taking the environment more seriously, but sodium-packed processed foods aren't the answer.",
+
+    // Medications, because WTF America
+    "SkinImplants.Title": "Fix Your Jawline!",
+    "SkinImplants.Text.1": "Ever thought your jawline needed a little work? Well, come by Doctor Hendricks today for our patented jawline injection! This is the only outpatient procedure guaranteed to firm up those jowls and sharpen that jawline. 30% off for the next two weeks!",
+    "SkinImplants.Text.2": "There is a small risk the needle may puncture a vein, which may lead to numbness, blindness, or even death.",
+
+    "harvey-skin-implants": "That new skin implant, @, I'm not really sure.$s#$b#The side effects, it just doesn't seem safe enough to offer.$s",
+
+    "HairInjection.Title": "Grow Your Hair Back Painlessly!",
+    "HairInjection.Text.1": "Losing your hair? No problem with our new half-yearly injection, TwoMonthsya!",
+    "HairInjection.Text.2": "May cause boils to appear all over your body. Consult a doctor to ensure that TwoMonthsya is suitable for your individual needs.",
+
+    "kent-hair-injection": "Say, @, do you think my hairline is receding?#$b#I've been thinking of getting hair implants, and we can afford it since we got a coupon in the mail....",
+
+    "Therapy.Title": "Remote Therapy Available",
+    "Therapy.Text.1": "Feeling bad about yourself? No fear, we're here! Providing long-distance therapy via phone or letter to rural areas.",
+    "Therapy.Text.2": "We promise to never sell your data.",
+
+    // vacation
+    "IslandVacation.Title": "Take off to a Tropical Paradise",
+    "IslandVacation.Text.1": "Enjoy a nice pina colada on the white sandy beaches of Ginger Island! Just 1000$ for a ticket!",
+    "IslandVacation.Text.2": "Departs daily from the Pelican Town Beach.",
+
+    "Cruise.Title": "Enjoy Our Gem Seas With This Unique Cruise",
+    "Cruise.Text.1": "Cruise around the Gem Seas with us, and take in the sights in the most comfortable of ways! Includes on-ship pool, plenty of bars, and a top deck track for the fitness freaks who work out on a vacation for some reason.",
+    "Cruise.Text.2": "100% norovirus free!",
+
+    // Casino
+    "Casino.Title": "Come Try Your Luck",
+    "Casino.Text.1": "Come try your luck at the Calico Desert's Casino! Featuring blackjack and many slot machines!",
+    "Casino.Text.2": "Adults only, open all hours.",
+
+    "pam-casino": "Ma used to really love gambling. She'd go up to the casino whenever she could.#$b#I miss her.$s",
+
+    "robin-casino": "Demetrius and I went to a casino once. He spent the entire night trying to calculate the optimal way to win at the slot machines.",
+
+    /*************
+    * Composter
+    ***************/
+    "Composter.Title": "Kitchen Countertop Composter - Cheap and Easy!",
+    "Composter.Text.1": "Tired of food scraps stinking up your kitchen? Just buy our patented Electric Kitchen Countertop Composter. With just nine payments of 1000$, you can create compost in hours!",
+
+    "jodi-composter": "Look, @, I bought that composter that's been all over the news lately.$h#$b#Works wonders, takes care of all my food scraps!",
+    "emily-composter": "Gosh, I don't know why people keep falling for greenwashing.#$b#That composter they keep advertising, it uses electricity, so it really doesn't help the environment any.$s",
+    "demetrius-composter": "Composting is so much better for our environment than leaving our food scraps to rot in a landfill.",
+
+    /**************
+    * Clothing
+    ****************/
+
+    "Clothing.Title": "Half-off Bridal!",
+    "Clothing.Text.1": "Starting from now to the end of the year, all bridal gowns are half-off! Including all Diane's, all Les Dames, and all Bridal-Gear-For-Less!",
+    "Clothing.Text.2": "Does not include the skirt.",
+
+    "emily-clothing": "Gosh, I feel like even the fancy clothing stores are mostly just selling shoddy items these days... No thought to quality construction or quality materials.$s#$b#Shoddy craftsmanship, all of it now....$s",
+    "haley-clothing-unmarried": "Oh, @, did you see this advertisement for wedding gowns that came in the other day? Aren't these beautiful? I'd love to be able to wear any of these for my wedding.",
+    "haley-clothing-married-other": "Oh, @, take a look at these wedding dresses in this ad! Aren't they so pretty? Maybe I'll grab one for my recommitment ceremony...",
+    "haley-clothing-married-player":"Oh, hey, @! Take a look at these dresses in this ad here, aren't they so fashionable? If we were to get married again, which one would you like to see me in?",
+
+    // VPN
+    "VPN.Title": "Protect Your Privacy!",
+    "VPN.Text": "Did you know that when you're browsing online, every website tracks you! Well, they do! Let us help you hide from them. Only 99g for the first month!",
+
+    "lewis-vpn": "Hey, @, can you explain this VPN thing to me? Is it something we should be doing?",
+
+    // pizza
+    "Pizza.Title": "Enjoy our new fully-stuffed-crust pizza!",
+    "Pizza.Text.1": "You've enjoyed our classic mozzarella-stuffed crust for years! But what if we bought the cheese throughout the whole crust!",
+    "Pizza.Text.2": "Introducing the new Pizza Cabin Fully-Stuffed-Crust Pizza, with a layer of cheese under the whoooollllleeee pizza!",
+
+    "shane-pizza": "Hey, @, you've seen that new fully-stuffed-crust pizza? I can't wait to try it out?",
+    "gus-pizza": "@, you think I should start carrying lava cakes or something?#$b#Something to attract a younger crowd?",
+
+    "Spices.Title": "Crazy Jake's Crazy Spices",
+    "Spices.Text.1": "The hottest spices on this side of the Gem Sea! Guaranteed no one fresher or spicier!",
+    "Spices.Text.2": "Order now and get a free mug!",
+
+    // energy drinks?
+    "EnergyDrink.Title": "You've Got It, Athlete.",
+    "EnergyDrink.Text.1": "All you need is a single sip of our patented Bungle Blaster and you'll run faster than you've ever in your life!",
+    "EnergyDrink.Text.2": "Not recommended for pregnant women or anyone with heart issues.",
+
+    "harvey-energy-drink": "The amount of caffeine in energy drinks, it can't be safe...$s#$b#You'll stay away from them, won't you, @?",
+
+    "EnergyDrink2.Title": "Introducing...Fahrenheit!",
+    "EnergyDrink2.Text": "Now with even more caffeine, guaranteed to get you going all day long. And probably for tomorrow, too. Anddddd maybe the next day. There's a lot caffeine.",
+
+    "harvey-energy-drink-2": "Gosh, I think it's time for the regulators to step in and cap the amount of caffeine allowed in an energy drink. Did you see that Fahrenheit has 300mg per can?",
+
+    "EnergyDrink3.Title": "How Much Caffeine Is Too Much?",
+    "EnergyDrink3.Text.1": "We don't know, but we certainly put a lot in this lemonade! Now available in every store in the country, for the low low price of 1000g. It's good for your health, we promise!",
+    "EnergyDrink3.Text.2": "Health claims have not been evaluated by any government agency.",
+
+    // Tools Shop
+    "ToolsShop.Title": "Air Compressors For Less",
+    "ToolsShop.Text.1": "Introducing our new Black and Yellow Air Compressor, perfect for small tasks! Buy yours, thirty percent off, today!",
+    "ToolsShop.Text.2": "Home Improvement has never been easier!",
+
+    "robin-toolshop": "I wonder if I could convince Demetrius we need a new air compressor?",
+
+    "ToolsShop2.Title": "Get The Guy In Your Life Something",
+    "ToolsShop2.Text.1": "It's almost the Winter Star! You should probably get the guy in your life something. Got no ideas? What about getting him a tool?",
+    "ToolsShop2.Text.2": "Instead of figuring out what he already had and what projects he's planning, why not just get him a screwdriver set? We're selling them for cheap. Ta!",
+
+    "demetrius-toolsShop2": "I wish we could just skip the whole gift giving thing and just buy what we want, @.#$b#It'd be so much more efficient....#$b#Say, you have an idea of what I should get for Robin this year?",
+
+    "PennyStocks.Title": "Wanna Get Rich Fast?",
+    "PennyStocks.Text.1": "Don't invest in normal stocks, silver tier stocks are where it's at! With massive fluctuations come massive potential for profit!",
+    "PennyStocks.Text.2": "Statements have not been reviewed by any government agency. All investments have risk.",
+
+    "pam-pennystocks": "@, just invested most of my savings with that investment company that's been doing some advertising lately. Gonna earn so much with them!$h",
+
+    "penny-pennystocks": "Ma invested so much of our savings with this scummy broker.#$b#I...I hope it'll turn out okay, but...#$e#I wish people like this weren't allowed to take advantage of less educated folks like me and Ma...",
+
+    "GoldShop.Title": "The World's Ending!",
+    "GoldShop.Text": "You can't trust the financial system, so trust us instead! Buy gold from us, we promise we aren't overcharging you! Just 500$/bar.",
+
+    "Book.Title": "Buy My Book",
+    "Book.Text": "Hi! I'm Albert from Zuzu, and I've written a book that explains just how beholden our government is to mysterious forces. To understand why things in your life are going wrong, simply buy and read my book! It really does explain everything.",
+
+    "VideoGames.Title": "New Video Game Release",
+    "VideoGames.Text": "Look, it's basically the same game we released last year, and the year before that, but you're gonna buy it anyways, and you're gonna like it.",
+
+    "shane-videogames": "The new game from Catalyst? Nah, not buying that, it's the same game they released last year.#$b#I miss when new games used to be unique.",
+    "sam-videogames": "I'm saving up as much of my salary as possible to buy the new game Catalyst just dropped!$h#$b#@, you planning on getting it? It looks so good!",
+
+    // Affirm
+    "TV.Title": "Just Four Easy Payments",
+    "TV.Text": "Coveting that new TV your friend just bought? Don't have enough in the bank for it? Well, no worries, let Helping Hand help you out! Split anything into four easy payments! (Credit check required.)",
+
+    "george-tv": "Gosh, @, Alex's been hankering for a new TV lately, but to be frank, I can't bear parting with the one I have.#$b#Wouldn't know how to operate all the buttons on the new ones.",
+
+    // Craft store
+    "Craft.Title": "70% off yarn!",
+    "Craft.Text": "Come in this weekend for 70% off most of our stock! Yarn, glitter, cake decorations, anything to unlock your creativity!",
+
+    "haley-crafts": "Hey, @, do you think Emily would appreciate this kit to make a Winter Star snow globe?",
+
+    "Craft.WinterStar.Title": "Get Ready For Winter Star!",
+    "Craft.WinterStar.Text": "Nearly 70% off foam snowmen, fake snow, tinsel, and plastic trees! Because if you don't start now, you definitely won't get your Winter Star decorations done in time!",
+
+    "emily-winter-star-crafts": "Maybe I shouldn't try to knit Haley a sweater this year.#$b#Every year I think I'll have time to finish it but end up working late into the night the week before...",
+
+    "haley-winter-star-crafts": "What should I get Emily for Winter Star this year...hmmm...choices, choices.$h#$b#A gift card to her favorite craft store is always a hit, or a nice soft skein of good sock yarn.",
+
+    "Ring.Title": "Get Your Girl the Ring She Deserves",
+    "Ring.Text.1": "Selling half caret engagement rings for only 100,000$. Remember, if you don't get her a ring that costs at least three months salary, you really don't love her enough.",
+    "Ring.Text.2": "Make sure she has a stone that'll make all her friends jealous.",
+
+    "maru-ring": "Diamonds, because they're made of pure carbon, are actually quite flammable.",
+
+    "demetrius-ring": "Actually, @, diamonds aren't rare at all, their price is just elevated due to marketing.",
+
+    // Children
+    "Children.Title": "Cribs: Now With Free Installation",
+    "Children.Text.1": "Dear @, you may possibly be interested in a crib? Or maybe some baby clothing? Buy from BigRedDot and we'll throw in the installation for free!",
+    "Children.Text.2": "Why are we sending this to you now? Uh, no particular reason, we don't have analytics or anything. We promise.",
+
+    /**************
+    * Friendship Block
+    ***************/
+
+    // Art museum?
+    // Science museum?
+    // Coffee shop?
+
+    /*************
+    * Phone calls
+    ************/
+
+    "auto-insurance-call": "Have you re-priced your auto insurance lately? Maybe you should get to that.#We might be cheaper than your current plan. Or not. We'll tell you honestly. We promise.",
+    "eyebrows-call": "Get the trendiest new eyebrows at Miss Mary's Salon! Just 600$ per eyebrow. Walk-ins welcome.",
+    "gambling-call": "Gambling addict? No problem, just call us!#Rehab services offered, nowhere near any casinos, we promise.",
+    "goldbug-call": "Worried about inflation? Just buy gold!#Selling genuine gold bars, 500g each!",
+    "house-sales": "Buying properties, any condition!#Ever wanted to sell your house? We make it easy. Just dial 1-800-SELL-HOME today!",
+    "joja-call": "Buy anything online from Joja.#Now with free two day shipping!",
+    "joja-call2": "You have the whole world at your fingertips with Joja at your side!#Just pop online and order, it'll be there in two days.#Anything you want, on your doorstep, you don't even need to go outside.#You never need to go outside anymore.",
+    "lawyer-call": "Workplace injury? We'll get you compensation.#No money up front, we'll just take a cut if we win.",
+    "loan-call": "Offering paycheck advances, no credit check needed!#Call us any time, if you need any emergency funds.",
+    "music-tickets": "Selling tickets for all your favorite artists!#All concerts sold out? No worries, we'll get you tickets. Somehow.",
+    "online-shopping-call": "Get your farming supplies online at Farming-dot-com, for absurdly cheap!#But hurry, this won't last long, we're not sure how long the venture capitalists will continue giving us money...",
+    "pizza-call": "Your pizza, hot and fresh, in thirty minutes, or it's on us!#Just call us at 1-800...",
+    "romance-call": "Single...ladies...near you...may be interested in your company.#Look, Jane, what IS this script you're having me read? What IS this? No, I can't possibly SAY that.#I QUIT."
+}

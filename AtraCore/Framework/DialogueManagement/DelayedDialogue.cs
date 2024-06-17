@@ -5,7 +5,7 @@ namespace AtraCore.Framework.DialogueManagement;
 /// <summary>
 /// A dialogue to delay.
 /// </summary>
-public readonly struct DelayedDialogue : IComparable<DelayedDialogue>, IEquatable<DelayedDialogue>
+internal readonly struct DelayedDialogue : IComparable<DelayedDialogue>, IEquatable<DelayedDialogue>
 {
     private readonly int time;
     private readonly Dialogue dialogue;
@@ -91,18 +91,13 @@ public readonly struct DelayedDialogue : IComparable<DelayedDialogue>, IEquatabl
     /// <inheritdoc />
     public override int GetHashCode()
     {
-        unchecked
+        HashCode hash = new();
+        hash.Add(this.time);
+        hash.Add(this.npc.Name);
+        foreach (DialogueLine dl in this.dialogue.dialogues)
         {
-            const int factor = -0x5AAA_AAD7;
-
-            int ret = (EqualityComparer<int>.Default.GetHashCode(this.time) * factor) + EqualityComparer<string>.Default.GetHashCode(this.npc.Name);
-            foreach (string? s in this.dialogue.dialogues)
-            {
-                ret *= factor;
-                ret += EqualityComparer<string>.Default.GetHashCode(s);
-            }
-
-            return ret;
+            hash.Add(dl.Text);
         }
+        return hash.ToHashCode();
     }
 }

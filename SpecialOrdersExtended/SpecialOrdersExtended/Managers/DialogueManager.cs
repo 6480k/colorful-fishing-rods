@@ -1,15 +1,25 @@
-﻿using AtraBase.Toolkit;
+﻿// Ignore Spelling: Perscreened
+
+using AtraBase.Toolkit;
+
 using AtraCore.Framework.DialogueManagement;
+
 using AtraShared;
+using AtraShared.ConstantsAndEnums;
 using AtraShared.Utils.Extensions;
+
 using SpecialOrdersExtended.DataModels;
+
 using StardewModdingAPI.Utilities;
+
+using StardewValley.SpecialOrders;
 
 namespace SpecialOrdersExtended.Managers;
 
 /// <summary>
-/// Static. Handles logic, patches, and console commands related to the special order dialogues.
+/// Static. Handles logic, patches, and console commands related to the special order dialogue.
 /// </summary>
+[SuppressMessage("StyleCop.CSharp.NamingRules", "SA1313:Parameter names should begin with lower-case letter", Justification = StyleCopConstants.NamedForHarmony)]
 internal class DialogueManager
 {
     /// <summary>
@@ -20,7 +30,7 @@ internal class DialogueManager
     /// <summary>
     /// Gets the current perscreened dialogue log.
     /// </summary>
-    public static DialogueLog? PerscreenedDialogueLog
+    internal static DialogueLog? PerscreenedDialogueLog
         => InternalDialogueLog.Value;
 
     /// <summary>
@@ -249,13 +259,20 @@ internal class DialogueManager
         {
             return;
         }
-        foreach (string dialogueKey in PerscreenedDialogueLog.SeenDialogues.Keys)
+        try
         {
-            if (dialogueKey.Contains(specialOrderKey))
+            foreach (string dialogueKey in PerscreenedDialogueLog.SeenDialogues.Keys)
             {
-                ModEntry.ModMonitor.DebugOnlyLog($"Removing key {dialogueKey}");
-                PerscreenedDialogueLog.SeenDialogues.Remove(dialogueKey);
+                if (dialogueKey.Contains(specialOrderKey))
+                {
+                    ModEntry.ModMonitor.DebugOnlyLog($"Removing key {dialogueKey}");
+                    PerscreenedDialogueLog.SeenDialogues.Remove(dialogueKey);
+                }
             }
+        }
+        catch (Exception ex)
+        {
+            ModEntry.ModMonitor.LogError("removing dialogue for failed orders", ex);
         }
     }
 
@@ -264,16 +281,15 @@ internal class DialogueManager
     /// </summary>
     /// <param name="__result">Result from the original function.</param>
     /// <param name="__instance">NPC in question.</param>
-    /// <param name="__0">NPC heart level.</param>
-    /// <param name="__1">NoPreface in vanilla code - to preface with season or not.</param>
-    /// <exception cref="UnexpectedEnumValueException{SpecialOrder.QuestState}">Recieved unexpected enum value.</exception>
-    [SuppressMessage("StyleCop.CSharp.NamingRules", "SA1313:Parameter names should begin with lower-case letter", Justification = "Convention used by Harmony")]
-    internal static void PostfixCheckDialogue(ref bool __result, ref NPC __instance, int __0, bool __1)
+    /// <param name="heartLevel">NPC heart level.</param>
+    /// <param name="noPreface">NoPreface in vanilla code - to preface with season or not.</param>
+    /// <param name="__runOriginal">If the original method was run or not.</param>
+    internal static void PostfixCheckDialogue(ref bool __result, ref NPC __instance, int heartLevel, bool noPreface, bool __runOriginal)
     {
         try
         {
-            // have already found a New Current Dialogue
-            if (__result)
+            // have already found a New Current Dialogue, or some other mod caused the original to be skipped.
+            if (__result || !__runOriginal)
             {
                 return;
             }
@@ -286,24 +302,24 @@ internal class DialogueManager
                     continue;
                 }
 
-                string baseKey = __1 ? specialOrder.questKey.Value : Game1.currentSeason + specialOrder.questKey.Value;
+                string baseKey = noPreface ? specialOrder.questKey.Value : Game1.currentSeason + specialOrder.questKey.Value;
                 baseKey += specialOrder.questState.Value switch
                 {
-                    SpecialOrder.QuestState.InProgress => "_InProgress",
-                    SpecialOrder.QuestState.Failed => "_Failed",
-                    SpecialOrder.QuestState.Complete => "_Completed",
-                    _ => throw new UnexpectedEnumValueException<SpecialOrder.QuestState>(specialOrder.questState.Value),
+                    SpecialOrderStatus.InProgress => "_InProgress",
+                    SpecialOrderStatus.Failed => "_Failed",
+                    SpecialOrderStatus.Complete => "_Completed",
+                    _ => throw new UnexpectedEnumValueException<SpecialOrderStatus>(specialOrder.questState.Value),
                 };
-                __result = FindBestDialogue(baseKey, __instance, __0);
+                __result = FindBestDialogue(baseKey, __instance, heartLevel);
                 if (__result)
                 {
                     return;
                 }
 
                 // Handle repeat orders!
-                if (specialOrder.questState.Value == SpecialOrder.QuestState.InProgress && Game1.player.team.completedSpecialOrders.ContainsKey(specialOrder.questKey.Value))
+                if (specialOrder.questState.Value == SpecialOrderStatus.InProgress && Game1.player.team.completedSpecialOrders.Contains(specialOrder.questKey.Value))
                 {
-                    __result = FindBestDialogue((__1 ? specialOrder.questKey.Value : Game1.currentSeason + specialOrder.questKey.Value) + "_RepeatOrder", __instance, __0);
+                    __result = FindBestDialogue((noPreface ? specialOrder.questKey.Value : Game1.currentSeason + specialOrder.questKey.Value) + "_RepeatOrder", __instance, heartLevel);
                     if (__result)
                     {
                         return;
@@ -316,7 +332,7 @@ internal class DialogueManager
             {
                 foreach (string cacheOrder in cacheOrders)
                 {
-                    __result = FindBestDialogue(cacheOrder + "_Completed", __instance, __0);
+                    __result = FindBestDialogue(cacheOrder + "_Completed", __instance, heartLevel);
                     if (__result)
                     {
                         return;
@@ -327,7 +343,7 @@ internal class DialogueManager
             // Handle available order dialogue.
             if (SpecialOrder.IsSpecialOrdersBoardUnlocked())
             {
-                HashSet<string> currentOrders = Game1.player.team.specialOrders.Where(s => s?.questKey is not null).Select((SpecialOrder s) => s.questKey.Value).ToHashSet();
+                HashSet<string> currentOrders = Game1.player.team.specialOrders.Where(s => s?.questKey is not null).Select(static (SpecialOrder s) => s.questKey.Value).ToHashSet();
                 foreach (SpecialOrder specialOrder in Game1.player.team.availableSpecialOrders)
                 {
                     if (specialOrder?.questKey is null)
@@ -337,7 +353,7 @@ internal class DialogueManager
 
                     if (!currentOrders.Contains(specialOrder.questKey.Value))
                     {
-                        __result = FindBestDialogue(specialOrder.questKey.Value + "_IsAvailable", __instance, __0);
+                        __result = FindBestDialogue(specialOrder.questKey.Value + "_IsAvailable", __instance, heartLevel);
                         if (__result)
                         {
                             return;
@@ -348,7 +364,7 @@ internal class DialogueManager
         }
         catch (Exception ex)
         {
-            ModEntry.ModMonitor.Log($"{I18n.Dialogue_ErrorInPatchedFunction(__instance.Name)}\n{ex}", LogLevel.Error);
+            ModEntry.ModMonitor.LogError($"checking for new current dialogue for {__instance.Name}", ex);
         }
     }
 
@@ -365,12 +381,18 @@ internal class DialogueManager
         {// I have already said this dialogue
             return false;
         }
+        Dialogue? dialogue = npc.TryGetDialogue(dialogueKey);
+        if (dialogue is null)
+        {
+            return false;
+        }
+        dialogue.removeOnNextMove = true;
 
         QueuedDialogueManager.PushCurrentDialogueToQueue(npc);
 
         // Push my dialogue onto their stack.
-        npc.CurrentDialogue.Push(new Dialogue(npc.Dialogue[dialogueKey], npc) { removeOnNextMove = true });
-        if (ModEntry.Config.Verbose)
+        npc.CurrentDialogue.Push(dialogue);
+        if (ModEntry.ModMonitor.IsVerbose)
         {
             ModEntry.ModMonitor.Log(I18n.Dialogue_FoundKey(dialogueKey), LogLevel.Debug);
         }
@@ -409,10 +431,11 @@ internal class DialogueManager
             return PushAndSaveDialogue(baseKey, npc);
         }
 
-        if (ModEntry.Config.Verbose)
+        if (ModEntry.ModMonitor.IsVerbose)
         {
-            ModEntry.ModMonitor.Log(I18n.Dialogue_NoKey(baseKey, npc.Name), LogLevel.Trace);
+            ModEntry.ModMonitor.Log(I18n.Dialogue_NoKey(baseKey, npc.Name));
         }
+
         return false;
     }
 }

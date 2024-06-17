@@ -1,6 +1,11 @@
-﻿using AtraBase.Toolkit.Extensions;
+﻿namespace StopRugRemoval;
 
-using AtraCore.Utilities;
+using System.Diagnostics;
+
+using AtraBase.Toolkit.Extensions;
+
+using AtraCore.Framework.Caches;
+using AtraCore.Framework.QueuePlayerAlert;
 
 using AtraShared.ConstantsAndEnums;
 using AtraShared.Integrations;
@@ -14,6 +19,7 @@ using HarmonyLib;
 using StardewModdingAPI.Enums;
 using StardewModdingAPI.Events;
 
+using StardewValley.Buildings;
 using StardewValley.Locations;
 using StardewValley.Objects;
 
@@ -27,8 +33,6 @@ using StopRugRemoval.HarmonyPatches.Volcano;
 
 using AtraUtils = AtraShared.Utils.Utils;
 
-namespace StopRugRemoval;
-
 /// <summary>
 /// Entry class to the mod.
 /// </summary>
@@ -40,11 +44,6 @@ internal sealed class ModEntry : Mod
     private MigrationManager? migrator;
 
     #region accessors
-
-    /// <summary>
-    /// Gets a function that gets Game1.multiplayer.
-    /// </summary>
-    internal static Func<Multiplayer> Multiplayer => MultiplayerHelpers.GetMultiplayer;
 
     /// <summary>
     /// Gets the logger for this file.
@@ -135,15 +134,15 @@ internal sealed class ModEntry : Mod
     [EventPriority(EventPriority.High)]
     private void OnButtonPressed(object? sender, ButtonPressedEventArgs e)
     {
-        if (MenuingExtensions.IsNormalGameplay())
+        if (MenuingExtensions.IsNormalGameplay() && Config.Enabled)
         {
             _ = RecipeConsumer.ConsumeRecipeIfNeeded(e, this.Helper.Input)
-                || CropAndTreeFlipper.OnButtonPressed(e, this.Helper.Input);
+                || CropAndTreeFlipper.OnButtonPressed(e, this.Helper.Input)
+                || ChestSwitcher.Switch(e, this.Helper.Input);
         }
     }
 
     /// <inheritdoc cref="ISpecializedEvents.LoadStageChanged"/>
-    /// <remarks>Unfucks the inventory size. Which I might have fucked up in a PR to JA.</remarks>
     [EventPriority(EventPriority.Low)]
     private void OnLoadStageChanged(object? sender, LoadStageChangedEventArgs e)
     {
@@ -162,6 +161,34 @@ internal sealed class ModEntry : Mod
 
                 this.Monitor.Log($"Checking for nulls in player quest log for {player.Name}");
                 player.questLog.ClearNulls();
+            }
+
+            this.Monitor.VerboseLog($"Attempting to clear nulls from returned donations");
+            Game1.player.team.returnedDonations.ClearNulls();
+
+            foreach (GameLocation? location in Game1.locations)
+            {
+                if (location is AnimalHouse)
+                {
+                    continue;
+                }
+
+                foreach ((long id, FarmAnimal? animal) in location.animals.Pairs)
+                {
+                    if (animal.home is null)
+                    {
+                        this.Monitor.Log($"{animal.displayName} appears to be homeless.", LogLevel.Warn);
+                        foreach (Building? building in location.buildings)
+                        {
+                            if (building.GetIndoors() is AnimalHouse animalHouse && animalHouse.animalsThatLiveHere.Contains(id))
+                            {
+                                animal.home = building;
+                                this.Monitor.Log($"{animal.displayName} assigned home {animalHouse.NameOrUniqueName}", LogLevel.Info);
+                                break;
+                            }
+                        }
+                    }
+                }
             }
         }
     }
@@ -202,7 +229,6 @@ internal sealed class ModEntry : Mod
         try
         {
             harmony.PatchAll(typeof(ModEntry).Assembly);
-            FruitTreesAvoidHoe.ApplyPatches(harmony, this.Helper.ModRegistry);
             if (!this.Helper.ModRegistry.IsLoaded("DecidedlyHuman.BetterReturnScepter"))
             {
                 ConfirmWarp.ApplyWandPatches(harmony);
@@ -233,12 +259,7 @@ internal sealed class ModEntry : Mod
         }
 
         // NPC sanity checking
-        this.Helper.Events.GameLoop.DayEnding += static (_, _) => DuplicateNPCDetector.DayEnd();
-
-        if (!this.Helper.ModRegistry.IsLoaded("spacechase0.CustomNPCFixes") && new Version(1, 6) > new Version(Game1.version))
-        {
-            this.Helper.Events.GameLoop.DayStarted += static (_, _) => DuplicateNPCDetector.DayStart();
-        }
+        this.Helper.Events.GameLoop.DayStarted += static (_, _) => DuplicateNPCDetector.DayStart();
 
         if (!this.Helper.ModRegistry.IsLoaded("violetlizabet.CP.NoAlcohol"))
         {
@@ -255,6 +276,9 @@ internal sealed class ModEntry : Mod
     {
         // This allows NPCs to say hi to the player. Yes, I'm that petty.
         Game1.player.displayName = Game1.player.Name;
+
+        // Crosscheck the player's spouse is still valid.
+        ValidateSpouse();
 
         if (Context.IsSplitScreen && Context.ScreenId != 0)
         {
@@ -291,36 +315,45 @@ internal sealed class ModEntry : Mod
             }
         }
 
+        // fix the railroad being silly
+        if (Game1.getLocationFromName("Railroad") is Railroad railroad)
+        {
+            try
+            {
+                railroad.DayUpdate(Game1.dayOfMonth);
+            }
+            catch (Exception ex)
+            {
+                this.Monitor.Log($"Could not force railroad to update at save load:\n{ex}");
+            }
+        }
+
         if (Context.IsMainPlayer)
         {
             VolcanoChestAdjuster.LoadData(this.Helper.Data, this.Helper.Multiplayer);
 
-            Utility.ForAllLocations(action: static (GameLocation loc) =>
+#if DEBUG
+            Stopwatch sw = Stopwatch.StartNew();
+#endif
+
+            Utility.ForEachLocation(action: static (GameLocation loc) =>
             {
                 if (loc is null)
                 {
-                    return;
+                    return true;
                 }
 
-#warning - review and remove in stardew 1.6
-                // crosscheck and fix jukeboxes.
-                string song = loc.miniJukeboxTrack.Value;
-                if (!string.IsNullOrEmpty(song))
+                // crosscheck and remove nulls in GameLocation.characters
+                // Game and mods do not like this.
+                if (loc.characters is not null)
                 {
-                    ModMonitor.DebugOnlyLog($"Checking jukebox {song}...");
-                    try
+                    for (int i = loc.characters.Count - 1; i >= 0; i--)
                     {
-                        Game1.soundBank.GetCue(song);
-                    }
-                    catch (ArgumentException)
-                    {
-                        ModMonitor.Log($"Found missing soundtrack {song}, removing.", LogLevel.Warn);
-                        loc.miniJukeboxTrack.Value = string.Empty;
-                    }
-                    catch (Exception ex)
-                    {
-                        ModMonitor.Log($"Failed while trying to retrieve song {song} - {ex}.", LogLevel.Error);
-                        loc.miniJukeboxTrack.Value = string.Empty;
+                        if (loc.characters[i] is null)
+                        {
+                            ModMonitor.Log($"Found null in characters list for {loc.NameOrUniqueName}, removing.", LogLevel.Warn);
+                            loc.characters.RemoveAt(i);
+                        }
                     }
                 }
 
@@ -341,7 +374,48 @@ internal sealed class ModEntry : Mod
                 {
                     islandHouse.fridge?.Value?.clearNulls();
                 }
+
+                return true;
             });
+#if DEBUG
+            this.Monitor.LogTimespan("Sanity checking locations", sw, LogLevel.Trace);
+#endif
+        }
+    }
+
+    /// <summary>
+    /// Check to see if a player's spouse data is still valid.
+    /// </summary>
+    private static void ValidateSpouse()
+    {
+        const string modData = "atravita.RememberedSpouse";
+        if (Game1.player.spouse is not null && NPCCache.GetByVillagerName(Game1.player.spouse, searchTheater: true) is null)
+        {
+            string spouseName = Game1.player.spouse;
+            ModMonitor.Log($"Player married to {spouseName} but spouse instance not found.", LogLevel.Warn);
+            if (Game1.characterData.ContainsKey(spouseName))
+            {
+                ModMonitor.Log($"{spouseName} accounted for NPCDispos. We expect them to be respawned later.", LogLevel.Info);
+            }
+            else
+            {
+                ModMonitor.Log($"Cannot account for NPC spouse {spouseName}. Did you remove an NPC mod? Setting spouse to null.", LogLevel.Warn);
+                Game1.player.modData[modData] = Game1.player.spouse;
+                Game1.player.spouse = null;
+                PlayerAlertHandler.AddMessage(new(I18n.EmergencyDivorce_Message(spouseName), HUDMessage.error_type));
+            }
+        }
+        else if (!Game1.player.team.IsMarried(Game1.player.UniqueMultiplayerID) // player marriage.
+            && Game1.player.spouse is null && Game1.player.modData.TryGetValue(modData, out string? pastSpouse)
+            && Game1.player.friendshipData.TryGetValue(pastSpouse, out Friendship? friendship) && friendship.IsMarried())
+        {
+            ModMonitor.Log($"Checking past spouse {pastSpouse}.");
+            if (NPCCache.GetByVillagerName(pastSpouse, searchTheater: true) is not null)
+            {
+                ModMonitor.Log($"Past spouse found! Re-initiating marriage.", LogLevel.Info);
+                Game1.player.spouse = pastSpouse;
+                Game1.player.modData.Remove(modData);
+            }
         }
     }
 

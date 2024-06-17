@@ -48,24 +48,24 @@ public static partial class DirectionExtensions
 {
     #region consts
 
-    private static Direction[] cardinal = new[]
-    {
+    private static readonly Direction[] cardinal =
+    [
         Direction.Up,
         Direction.Down,
         Direction.Left,
         Direction.Right,
-    };
+    ];
 
-    private static Direction[] ordinal = new[]
-    {
+    private static readonly Direction[] ordinal =
+    [
         Direction.Up | Direction.Right,
         Direction.Up | Direction.Left,
         Direction.Down | Direction.Right,
         Direction.Down | Direction.Left,
-    };
+    ];
 
-    private static Direction[] valid = new[]
-    {
+    private static readonly Direction[] valid =
+    [
         Direction.Up,
         Direction.Down,
         Direction.Left,
@@ -74,7 +74,7 @@ public static partial class DirectionExtensions
         Direction.Up | Direction.Left,
         Direction.Down | Direction.Right,
         Direction.Down | Direction.Left,
-    };
+    ];
 
     /// <summary>
     /// Gets all valid directions.

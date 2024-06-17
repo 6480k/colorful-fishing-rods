@@ -1,4 +1,6 @@
-using System.Reflection;
+namespace AtraShared.ConstantsAndEnums;
+
+using AtraBase.Toolkit;
 
 using CommunityToolkit.Diagnostics;
 
@@ -6,18 +8,22 @@ using NetEscapades.EnumGenerators;
 
 using static System.Numerics.BitOperations;
 
-namespace AtraShared.ConstantsAndEnums;
-
 /// <summary>
-/// Wallet items as flags....
+/// Skills as flags....
 /// </summary>
 [Flags]
 [EnumExtensions]
-[SuppressMessage("StyleCop.CSharp.DocumentationRules", "SA1602:Enumeration items should be documented", Justification = "Should be obvious.")]
+[SuppressMessage("StyleCop.CSharp.DocumentationRules", "SA1602:Enumeration items should be documented", Justification = StyleCopErrorConsts.SelfEvident)]
 public enum Skills
 {
+    /// <summary>
+    /// No skills.
+    /// </summary>
     None = 0,
 
+    /// <summary>
+    /// Farming.
+    /// </summary>
     Farming = 0b1 << Farmer.farmingSkill,
     Mining = 0b1 << Farmer.miningSkill,
     Fishing = 0b1 << Farmer.fishingSkill,
@@ -34,12 +40,12 @@ public static partial class SkillsExtensions
     private static readonly Skills[] _all = GetValues().Where(a => PopCount((uint)a) == 1).ToArray();
 
     /// <summary>
-    /// Gets a span containing all wallet items.
+    /// Gets a span containing all vanilla skills.
     /// </summary>
     public static ReadOnlySpan<Skills> All => new(_all);
 
     /// <summary>
-    /// Checks if this specific farmer has a specific skill level
+    /// Checks if this specific farmer has a specific skill level.
     /// </summary>
     /// <param name="farmer">Farmer to check.</param>
     /// <param name="skills">Skill to check for.</param>
@@ -49,23 +55,35 @@ public static partial class SkillsExtensions
     {
         Guard.IsEqualTo(PopCount((uint)skills), 1);
 
-        switch (skills)
+        return skills switch
         {
-            case Skills.Mining:
-                return includeBuffs ? farmer.MiningLevel : farmer.miningLevel.Value;
-            case Skills.Farming:
-                return includeBuffs ? farmer.FarmingLevel : farmer.farmingLevel.Value;
-            case Skills.Foraging:
-                return includeBuffs ? farmer.ForagingLevel : farmer.foragingLevel.Value;
-            case Skills.Combat:
-                return includeBuffs ? farmer.CombatLevel : farmer.combatLevel.Value;
-            case Skills.Fishing:
-                return includeBuffs ? farmer.FishingLevel : farmer.fishingLevel.Value;
-            case Skills.Luck:
-                return includeBuffs ? farmer.LuckLevel : farmer.luckLevel.Value;
-        }
+            Skills.Mining => includeBuffs ? farmer.MiningLevel : farmer.miningLevel.Value,
+            Skills.Farming => includeBuffs ? farmer.FarmingLevel : farmer.farmingLevel.Value,
+            Skills.Foraging => includeBuffs ? farmer.ForagingLevel : farmer.foragingLevel.Value,
+            Skills.Combat => includeBuffs ? farmer.CombatLevel : farmer.combatLevel.Value,
+            Skills.Fishing => includeBuffs ? farmer.FishingLevel : farmer.fishingLevel.Value,
+            Skills.Luck => includeBuffs ? farmer.LuckLevel : farmer.luckLevel.Value,
+            _ => ThrowHelper.ThrowArgumentOutOfRangeException<int>($"{skills.ToStringFast()} does not correspond to a single vanilla skill!"),
+        };
+    }
 
-        ThrowHelper.ThrowArgumentOutOfRangeException($"{skills.ToStringFast()} does not correspond to a single vanilla skill!");
-        return 0;
+    /// <summary>
+    /// Converts from a Skills enum to the game constant.
+    /// </summary>
+    /// <param name="skills">The skill enum.</param>
+    /// <returns>The game constant.</returns>
+    public static int ToGameConstant(this Skills skills)
+    {
+        Guard.IsEqualTo(PopCount((uint)skills), 1);
+        return skills switch
+        {
+            Skills.Farming => Farmer.farmingSkill,
+            Skills.Mining => Farmer.miningSkill,
+            Skills.Foraging => Farmer.foragingSkill,
+            Skills.Combat => Farmer.combatSkill,
+            Skills.Fishing => Farmer.fishingSkill,
+            Skills.Luck => Farmer.luckSkill,
+            _ => ThrowHelper.ThrowArgumentOutOfRangeException<int>($"{skills.ToStringFast()} does not correspond to a single vanilla skill!"),
+        };
     }
 }

@@ -1,7 +1,11 @@
 ﻿using System.Runtime.CompilerServices;
 
+using AtraShared.Utils.Extensions;
+
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+
+using StardewValley.Enchantments;
 using StardewValley.Menus;
 
 namespace ForgeMenuChoice;
@@ -36,10 +40,14 @@ internal sealed class ForgeSelectionMenu : IClickableMenu
     /// Initializes a new instance of the <see cref="ForgeSelectionMenu"/> class.
     /// </summary>
     /// <param name="options">A list of possible enchantments.</param>
-    internal ForgeSelectionMenu(List<BaseEnchantment> options)
+    /// <param name="tool">The tool instance this menu was created for.</param>
+    /// <param name="isInnate">Whether or not this menu is for innate enchantments.</param>
+    internal ForgeSelectionMenu(List<BaseEnchantment> options, Tool tool, bool isInnate)
         : base(GetXPosFromViewport(Game1.uiViewport.Width), GetYPosFromViewport(Game1.viewport.Height), Width, Height)
     {
         this.options = options;
+        this.Tool = tool;
+        this.IsInnate = isInnate;
 
         this.inherentWidth = (int)ModEntry.StringUtils.MeasureWord(Game1.dialogueFont, "Matador de Insetos") + 12;
 
@@ -51,6 +59,16 @@ internal sealed class ForgeSelectionMenu : IClickableMenu
         this.shouldShowTooltip = ModEntry.Config.TooltipBehavior == TooltipBehavior.On
             || (ModEntry.Config.TooltipBehavior == TooltipBehavior.Immersive && Utility.HasAnyPlayerSeenSecretNote(1008));
     }
+
+    /// <summary>
+    /// Gets the tool instance this menu was created for.
+    /// </summary>
+    internal Tool Tool { get; init; }
+
+    /// <summary>
+    /// Gets a value indicating whether whether or not this is an innate enchantment.
+    /// </summary>
+    internal bool IsInnate { get; init; }
 
     /// <summary>
     /// Gets the currently selected enchantment.
@@ -114,7 +132,7 @@ internal sealed class ForgeSelectionMenu : IClickableMenu
         }
         catch (Exception ex)
         {
-            ModEntry.ModMonitor.Log($"Failed while trying to process a left click on smol menu.\n\n{ex}", LogLevel.Error);
+            ModEntry.ModMonitor.LogError("left clicking on smol menu", ex);
         }
     }
 
@@ -136,7 +154,7 @@ internal sealed class ForgeSelectionMenu : IClickableMenu
         }
         catch (Exception ex)
         {
-            ModEntry.ModMonitor.Log($"Failed in trying to adjust window size for smol menu\n{ex}", LogLevel.Error);
+            ModEntry.ModMonitor.LogError("adjusting window size for smol menu", ex);
         }
     }
 
@@ -162,7 +180,7 @@ internal sealed class ForgeSelectionMenu : IClickableMenu
         }
         catch (Exception ex)
         {
-            ModEntry.ModMonitor.Log($"Ran into errors handling hover on smol menu.\n{ex}", LogLevel.Error);
+            ModEntry.ModMonitor.LogError("hovering on smol menu", ex);
         }
     }
 
@@ -210,7 +228,7 @@ internal sealed class ForgeSelectionMenu : IClickableMenu
         }
         catch (Exception ex)
         {
-            ModEntry.ModMonitor.Log($"Ran into difficulties trying to draw smol menu!\n{ex}", LogLevel.Error);
+            ModEntry.ModMonitor.LogError("drawing smol menu", ex);
         }
     }
 

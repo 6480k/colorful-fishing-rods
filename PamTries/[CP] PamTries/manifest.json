@@ -29,10 +29,6 @@
         "IsRequired": false,
     },
     {
-        "UniqueID": "PurrplingCat.CustomGiftDialogue",
-        "IsRequired": false
-    },
-    {
         "UniqueID": "TheMightyAmondee.CustomTokens",
         "IsRequired": false,
     },
@@ -46,6 +42,10 @@
     },
     {
         "UniqueID": "Rafseazz.RSVCP",
+        "IsRequired": false,
+    },
+    {
+        "UniqueID": "atravita.CP.DialogueExpansion",
         "IsRequired": false,
     }
     ]

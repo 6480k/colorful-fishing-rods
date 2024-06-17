@@ -4,8 +4,14 @@ using System.Reflection.Emit;
 using AtraBase.Toolkit.Reflection;
 
 using AtraCore.Framework.ReflectionManager;
+
+using AtraShared.Utils.Extensions;
+
 using AtraShared.Utils.HarmonyHelper;
 using HarmonyLib;
+
+using StardewValley.Enchantments;
+using StardewValley.Tools;
 
 namespace ForgeMenuChoice.HarmonyPatches;
 
@@ -16,6 +22,10 @@ namespace ForgeMenuChoice.HarmonyPatches;
 [HarmonyPatch(typeof(Tool))]
 internal static class GetEnchantmentPatch
 {
+    /// <summary>
+    /// Applies a patch against EnchantableScythes.
+    /// </summary>
+    /// <param name="harmony">My harmony instance.</param>
     internal static void ApplyPatch(Harmony harmony)
     {
         try
@@ -28,7 +38,7 @@ internal static class GetEnchantmentPatch
         }
         catch (Exception ex)
         {
-            ModEntry.ModMonitor.Log($"Mod crashed while transpiling EnchantableScythes. Integration may not work correctly.\n\n{ex}", LogLevel.Error);
+            ModEntry.ModMonitor.LogError("transpiling EnchantableScythes", ex);
         }
     }
 
@@ -37,12 +47,12 @@ internal static class GetEnchantmentPatch
     /// </summary>
     /// <param name="base_item">Tool.</param>
     /// <param name="item">Thing to enchant with.</param>
-    /// <returns>Enchanment to substitute in.</returns>
+    /// <returns>Enchantment to substitute in.</returns>
     private static BaseEnchantment SubstituteEnchantment(Item base_item, Item item)
     {
         try
         {
-            if (Utility.IsNormalObjectAtParentSheetIndex(item, 74) && ForgeMenuPatches.CurrentSelection is not null)
+            if (item.QualifiedItemId == "(O)74" && ForgeMenuPatches.CurrentSelection is not null)
             {
                 BaseEnchantment output = ForgeMenuPatches.CurrentSelection;
                 ForgeMenuPatches.TrashMenu();
@@ -51,9 +61,21 @@ internal static class GetEnchantmentPatch
         }
         catch (Exception ex)
         {
-            ModEntry.ModMonitor.Log($"Failed in forcing selection of enchantment.\n\n{ex}", LogLevel.Error);
+            ModEntry.ModMonitor.LogError("forcing selection of enchantment", ex);
         }
         return BaseEnchantment.GetEnchantmentFromItem(base_item, item);
+    }
+
+    private static Item SubstituteInnateEnchantment(Item weapon, Random r, bool force, List<BaseEnchantment>? enchantsToReRoll = null)
+    {
+        if (weapon is not MeleeWeapon w || ForgeMenuPatches.CurrentSelection is not { } selection)
+        {
+            return MeleeWeapon.attemptAddRandomInnateEnchantment(weapon, r, force, enchantsToReRoll);
+        }
+        w.enchantments.Add(ForgeMenuPatches.CurrentSelection);
+        ForgeMenuPatches.TrashMenu();
+
+        return weapon;
     }
 
     [HarmonyPatch(nameof(Tool.Forge))]
@@ -62,21 +84,26 @@ internal static class GetEnchantmentPatch
         try
         {
             ILHelper helper = new(original, instructions, ModEntry.ModMonitor, gen);
-            helper.FindFirst(new CodeInstructionWrapper[]
-            {
+            helper.FindFirst(
+            [
                 new(OpCodes.Ldarg_0),
                 new(SpecialCodeInstructionCases.LdArg),
                 new(OpCodes.Call, typeof(BaseEnchantment).GetCachedMethod(nameof(BaseEnchantment.GetEnchantmentFromItem), ReflectionCache.FlagTypes.StaticFlags)),
                 new(SpecialCodeInstructionCases.StLoc),
                 new(SpecialCodeInstructionCases.LdLoc),
-            })
+            ])
             .Advance(2)
-            .ReplaceOperand(typeof(GetEnchantmentPatch).GetCachedMethod(nameof(GetEnchantmentPatch.SubstituteEnchantment), ReflectionCache.FlagTypes.StaticFlags));
+            .ReplaceOperand(typeof(GetEnchantmentPatch).GetCachedMethod(nameof(SubstituteEnchantment), ReflectionCache.FlagTypes.StaticFlags))
+            .FindNext(
+                [
+                    new(OpCodes.Call, typeof(MeleeWeapon).GetCachedMethod(nameof(MeleeWeapon.attemptAddRandomInnateEnchantment), ReflectionCache.FlagTypes.StaticFlags))
+                ])
+            .ReplaceOperand(typeof(GetEnchantmentPatch).GetCachedMethod(nameof(SubstituteInnateEnchantment), ReflectionCache.FlagTypes.StaticFlags));
             return helper.Render();
         }
         catch (Exception ex)
         {
-            ModEntry.ModMonitor.Log($"Ran into errors transpiling {original.FullDescription()} to use selection.\n\n{ex}", LogLevel.Error);
+            ModEntry.ModMonitor.LogTranspilerError(original, ex);
         }
         return null;
     }

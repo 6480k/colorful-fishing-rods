@@ -1,4 +1,9 @@
-﻿using AtraShared.Integrations.GMCMAttributes;
+﻿using System.Text.Json.Serialization;
+
+using AtraBase.Toolkit;
+
+using AtraShared.Integrations.GMCMAttributes;
+using AtraShared.Niceties;
 
 using Microsoft.Xna.Framework;
 
@@ -9,7 +14,7 @@ namespace CameraPan.Framework;
 /// <summary>
 /// The config class for this mod.
 /// </summary>
-[SuppressMessage("StyleCop.CSharp.OrderingRules", "SA1201:Elements should appear in the correct order", Justification = "Fields kept near accessors.")]
+[SuppressMessage("StyleCop.CSharp.OrderingRules", "SA1201:Elements should appear in the correct order", Justification = StyleCopErrorConsts.AccessorsNearFields)]
 public sealed class ModConfig
 {
     /// <summary>
@@ -30,6 +35,7 @@ public sealed class ModConfig
     /// <summary>
     /// Gets or sets the color for which to draw the Mozilla Arrows TM.
     /// </summary>
+    [JsonConverter(typeof(ColorConverter))]
     [GMCMDefaultColor(127, 255, 0, 255)]
     public Color ClickAndDragColor { get; set; } = Color.Chartreuse;
 
@@ -53,6 +59,30 @@ public sealed class ModConfig
     private int xRange = 1000;
 
     private int yRange = 1000;
+
+    private float minZoom = 0.5f;
+
+    /// <summary>
+    /// Gets the minimum zoom level.
+    /// </summary>
+    [GMCMSection("Zoom", 0)]
+    public float MinZoom
+    {
+        get => this.minZoom;
+        set => this.minZoom = Math.Clamp(value, 0.1f, 0.75f);
+    }
+
+    private float maxZoom = 10f;
+
+    /// <summary>
+    /// Gets the maximum zoom level.
+    /// </summary>
+    [GMCMSection("Zoom", 0)]
+    public float MaxZoom
+    {
+        get => this.maxZoom;
+        set => this.maxZoom = Math.Clamp(value, 2f, 10f);
+    }
 
     /// <summary>
     /// Gets or sets the maximum distance the focal point can be from the player, on the x axis.
@@ -141,7 +171,6 @@ public sealed class ModConfig
     /// </summary>
     [GMCMSection("Keybind", 10)]
     public KeybindList RightButton { get; set; } = new(new(SButton.Right), new(SButton.RightThumbstickRight));
-
 
     /// <summary>
     /// Gets or sets the behavior of the camera in an indoors location.

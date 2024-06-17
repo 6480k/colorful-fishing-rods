@@ -1,9 +1,17 @@
-﻿using HarmonyLib;
+﻿using AtraShared.ConstantsAndEnums;
+using AtraShared.Utils.Extensions;
+
+using HarmonyLib;
+
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+
 using StardewModdingAPI.Events;
 using StardewModdingAPI.Utilities;
+
+using StardewValley.Enchantments;
 using StardewValley.Menus;
+using StardewValley.Tools;
 
 namespace ForgeMenuChoice.HarmonyPatches;
 
@@ -12,6 +20,7 @@ namespace ForgeMenuChoice.HarmonyPatches;
 /// </summary>
 /// <remarks>Also used to patch SpaceCore's forge menu.</remarks>
 [HarmonyPatch(typeof(ForgeMenu))]
+[SuppressMessage("StyleCop.CSharp.NamingRules", "SA1313:Parameter names should begin with lower-case letter", Justification = StyleCopConstants.NamedForHarmony)]
 internal static class ForgeMenuPatches
 {
     private static readonly PerScreen<List<BaseEnchantment>> PossibleEnchantmentPerscreen = new(() => new());
@@ -81,16 +90,20 @@ internal static class ForgeMenuPatches
     [HarmonyPrefix]
     [HarmonyPriority(Priority.High)]
     [HarmonyPatch(nameof(ForgeMenu.IsValidCraft))]
-    [SuppressMessage("StyleCop.CSharp.NamingRules", "SA1313:Parameter names should begin with lower-case letter", Justification = "Harmony convention")]
-    internal static bool PrefixIsValidCraft(Item __0, Item __1, ref bool __result)
+    internal static bool PrefixIsValidCraft(Item __0, Item __1, ref bool __result, ForgeMenu __instance)
     {
         try
         {
             // 74 - prismatic shard.
-            if (__0 is Tool tool && Utility.IsNormalObjectAtParentSheetIndex(__1, 74))
+            if (__0 is Tool tool && __1.QualifiedItemId == "(O)74")
             {
+                if (Menu is not null && !Menu.IsInnate && ReferenceEquals(Menu.Tool, tool))
+                {
+                    __result = true;
+                    return false;
+                }
                 PossibleEnchantments.Clear();
-                HashSet<Type> enchants = tool.enchantments.Select((a) => a.GetType()).ToHashSet();
+                HashSet<Type> enchants = tool.enchantments.Select(static a => a.GetType()).ToHashSet();
                 foreach (BaseEnchantment enchantment in BaseEnchantment.GetAvailableEnchantments())
                 {
                     if (enchantment.CanApplyTo(tool) && !enchants.Contains(enchantment.GetType()))
@@ -100,7 +113,27 @@ internal static class ForgeMenuPatches
                 }
                 if (PossibleEnchantments.Count > 0)
                 {
-                    Menu ??= new(options: PossibleEnchantments);
+                    Menu = new(options: PossibleEnchantments, tool, false);
+                    __result = true;
+                    return false;
+                }
+            }
+            else if (ModEntry.Config.OverrideInnateEnchantments && ReferenceEquals(__1, __instance.rightIngredientSpot.item)
+                && __0 is MeleeWeapon weapon && weapon.getItemLevel() < 15 && __1.QualifiedItemId == "(O)852" && !weapon.Name.Contains("Galaxy"))
+            {
+                if (Menu is not null && Menu.IsInnate && ReferenceEquals(Menu.Tool, weapon))
+                {
+                    __result = true;
+                    return false;
+                }
+                PossibleEnchantments.Clear();
+                foreach (BaseEnchantment enchantment in weapon.GetInnateEnchantments())
+                {
+                    PossibleEnchantments.Add(enchantment);
+                }
+                if (PossibleEnchantments.Count > 0)
+                {
+                    Menu = new(PossibleEnchantments, weapon, true);
                     __result = true;
                     return false;
                 }
@@ -110,9 +143,51 @@ internal static class ForgeMenuPatches
         }
         catch (Exception ex)
         {
-            ModEntry.ModMonitor.Log($"Error in postfixing IsValidCraft:\n{ex}", LogLevel.Error);
+            ModEntry.ModMonitor.LogError("postfixing IsValidCraft", ex);
         }
         return true;
+    }
+
+    // Derived from attemptAddRandomInnateEnchantment
+    private static IEnumerable<BaseEnchantment> GetInnateEnchantments(this MeleeWeapon weapon)
+    {
+        int weaponLevel = weapon.getItemLevel();
+        if (weaponLevel <= 10)
+        {
+            yield return new DefenseEnchantment()
+            {
+                Level = Math.Clamp((Random.Shared.Next(weaponLevel + 1) / 2) + 1, 1, 2),
+            };
+        }
+
+        yield return new LightweightEnchantment()
+        {
+            Level = Random.Shared.Next(1, 6),
+        };
+
+        yield return new SlimeGathererEnchantment();
+
+        yield return new AttackEnchantment()
+        {
+            Level = Math.Clamp((Random.Shared.Next(weaponLevel + 1) / 2) + 1, 1, 5),
+        };
+
+        yield return new CritEnchantment
+        {
+            Level = Math.Clamp(Random.Shared.Next(weaponLevel) / 3, 1, 3),
+        };
+
+        yield return new WeaponSpeedEnchantment
+        {
+            Level = Math.Max(1, Math.Min(Math.Max(1, 4 - weapon.speed.Value), Random.Shared.Next(weaponLevel))),
+        };
+
+        yield return new SlimeSlayerEnchantment();
+
+        yield return new CritPowerEnchantment()
+        {
+            Level = Math.Clamp(Random.Shared.Next(weaponLevel) / 3, 1, 3),
+        };
     }
 
     /// <summary>

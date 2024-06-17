@@ -26,6 +26,16 @@ internal sealed class ModConfig
     public bool SameBaitOnly { get; set; } = true;
 
     /// <summary>
+    /// Gets or sets a value indicating whether fishing chests should be automatically emptied into the inventory.
+    /// </summary>
+    public bool EmptyFishingChests { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets a value indicating whether or not to try to automatically equip bait.
+    /// </summary>
+    public bool EquipBaitWhileReceiving { get; set; } = true;
+
+    /// <summary>
     /// Gets or sets chance of consuming bait/tackle normally.
     /// </summary>
     [GMCMRange(0, 1)]

@@ -50,7 +50,7 @@ internal static class FishFoodHandler
             multiplayer.SendMessage(
                     UnsavedLocHandler,
                     PACKAGENAME,
-                    new[] { ModEntry.UNIQUEID },
+                    [ModEntry.UNIQUEID],
                     playerIDs ?? multiplayer.GetConnectedPlayers().Select((player) => player.PlayerID).ToArray());
         }
     }
@@ -62,7 +62,7 @@ internal static class FishFoodHandler
             multiplayer.SendMessage(
                 new LocationRecord(locName, days),
                 LOCATIONBROADCAST,
-                new[] { ModEntry.UNIQUEID },
+                [ModEntry.UNIQUEID],
                 playerIDs ?? multiplayer.GetConnectedPlayers().Select((player) => player.PlayerID).ToArray());
         }
     }
@@ -119,28 +119,43 @@ internal static class FishFoodHandler
         {
             return;
         }
-        UnsavedLocationsHandler newHandler = new();
+
         foreach ((string loc, int value) in UnsavedLocHandler.FishFoodLocationMap)
         {
             if (value > 1)
             {
-                newHandler.FishFoodLocationMap[loc] = value - 1;
+                UnsavedLocHandler.FishFoodLocationMap[loc] = value - 1;
+            }
+            else
+            {
+                UnsavedLocHandler.FishFoodLocationMap.Remove(loc);
             }
         }
-        UnsavedLocHandler = newHandler;
 
         Task broadcast = Task.Run(() => BroadcastHandler(multiplayer));
 
-        helper.WriteSaveData(FISHFOODSAVESTRING, newHandler);
-
-        Utility.ForAllLocations(static (GameLocation? loc) =>
+        if (UnsavedLocHandler.FishFoodLocationMap.Count > 0)
         {
-            if (loc?.modData?.GetInt(CanPlaceHandler.FishFood) is int value)
+            helper.WriteSaveData(FISHFOODSAVESTRING, UnsavedLocHandler);
+        }
+        else
+        {
+            helper.WriteSaveData<UnsavedLocationsHandler>(FISHFOODSAVESTRING, null);
+        }
+
+        Utility.ForEachLocation(
+            static (GameLocation? loc) =>
             {
-                ModEntry.ModMonitor.DebugOnlyLog($"Decrementing FishFood at {loc.NameOrUniqueName} - {value}", LogLevel.Debug);
-                loc.modData.SetInt(CanPlaceHandler.FishFood, Math.Max(value - 1, 0), defaultVal: 0);
-            }
-        });
+                if (loc?.modData?.GetInt(CanPlaceHandler.FishFood) is int value)
+                {
+                    ModEntry.ModMonitor.DebugOnlyLog($"Decrementing FishFood at {loc.NameOrUniqueName} - {value}", LogLevel.Debug);
+                    loc.modData.SetInt(CanPlaceHandler.FishFood, Math.Max(value - 1, 0), defaultVal: 0);
+                }
+
+                return true;
+            },
+            true,
+            true);
 
         broadcast.Wait();
     }
@@ -153,6 +168,6 @@ internal static class FishFoodHandler
         /// <summary>
         /// Gets or sets holds a map from unsaved locations to the FishFood values.
         /// </summary>
-        public Dictionary<string, int> FishFoodLocationMap { get; set; } = new();
+        public Dictionary<string, int> FishFoodLocationMap { get; set; } = [];
     }
 }

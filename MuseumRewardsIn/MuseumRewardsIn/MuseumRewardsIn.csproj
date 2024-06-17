@@ -10,7 +10,7 @@
     <Name>Museum Store</Name>
     <Description>Adds museum rewards to a store.</Description>
     <UpdateKeys>Nexus:12598</UpdateKeys>
-    <Version>0.2.3</Version>
+    <Version>0.3.0</Version>
     <BaseManifest>..\..\base_dependencies.json</BaseManifest>
   </PropertyGroup>
 
@@ -31,6 +31,10 @@
     <Using Alias="NotNullAttribute" Include="System.Diagnostics.CodeAnalysis.NotNullAttribute" />
     <Using Alias="Object" Include="System.Object" />
     <Using Alias="SObject" Include="StardewValley.Object" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Update="JetBrains.Annotations" Version="2023.3.0" />
   </ItemGroup>
 
 </Project>

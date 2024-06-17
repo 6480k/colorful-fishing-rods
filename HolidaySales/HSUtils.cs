@@ -8,6 +8,8 @@ using AtraShared.Utils.Extensions;
 using AtraShared.Utils.HarmonyHelper;
 using HarmonyLib;
 
+using Microsoft.Xna.Framework.Content;
+
 namespace HolidaySales;
 
 /// <summary>
@@ -15,6 +17,8 @@ namespace HolidaySales;
 /// </summary>
 internal static class HSUtils
 {
+    private static readonly ThreadLocal<HashSet<string>> _visited = new(static () => new());
+
     /// <summary>
     /// looks for calls to Utility.isFestivalDay and replaces it with calls to my custom method here.
     /// </summary>
@@ -22,18 +26,17 @@ internal static class HSUtils
     internal static void AdjustIsFestivalCall(this ILHelper helper)
     {
         helper.ForEachMatch(
-            new CodeInstructionWrapper[]
-            {
-                new(OpCodes.Call, typeof(Utility).GetCachedMethod(nameof(Utility.isFestivalDay), ReflectionCache.FlagTypes.StaticFlags)),
-            },
+            [
+                new(OpCodes.Call, typeof(Utility).GetCachedMethod(nameof(Utility.isFestivalDay), ReflectionCache.FlagTypes.StaticFlags, Type.EmptyTypes)),
+            ],
             (helper) =>
             {
                 helper.ReplaceOperand(typeof(HSUtils).GetCachedMethod(nameof(IsFestivalDayAdjustedForConfig), ReflectionCache.FlagTypes.StaticFlags));
-                helper.Insert(new CodeInstruction[]
-                {
+                helper.Insert(
+                [
                     new(OpCodes.Call, typeof(Game1).GetCachedProperty(nameof(Game1.currentLocation), ReflectionCache.FlagTypes.StaticFlags).GetGetMethod()),
                     new(OpCodes.Callvirt, typeof(GameLocation).GetCachedProperty(nameof(GameLocation.Name), ReflectionCache.FlagTypes.InstanceFlags).GetGetMethod()),
-                });
+                ]);
                 return true;
             });
     }
@@ -45,17 +48,17 @@ internal static class HSUtils
     internal static void AdjustIsFestivalCallForTown(this ILHelper helper)
     {
         helper.ForEachMatch(
-            new CodeInstructionWrapper[]
-            {
-                new(OpCodes.Call, typeof(Utility).GetCachedMethod(nameof(Utility.isFestivalDay), ReflectionCache.FlagTypes.StaticFlags)),
-            },
+            [
+                new(OpCodes.Call, typeof(Utility).GetCachedMethod(nameof(Utility.isFestivalDay), ReflectionCache.FlagTypes.StaticFlags, Type.EmptyTypes)),
+            ],
             (helper) =>
             {
-                helper.ReplaceOperand(typeof(HSUtils).GetCachedMethod(nameof(IsFestivalDayAdjustedForConfig), ReflectionCache.FlagTypes.StaticFlags));
-                helper.Insert(new CodeInstruction[]
-            {
-                    new(OpCodes.Ldstr, "Town"),
-            });
+                helper.ReplaceOperand(typeof(HSUtils).GetCachedMethod(nameof(IsFestivalDayAdjustedForConfig), ReflectionCache.FlagTypes.StaticFlags))
+                      .GetLabels(out IList<Label>? labelsToMove)
+                      .Insert(
+                [
+                    new CodeInstruction(OpCodes.Ldstr, "Town").WithLabels(labelsToMove),
+                ]);
                 return true;
         });
     }
@@ -66,7 +69,7 @@ internal static class HSUtils
     /// <returns>true if the store is closed, false otherwise.</returns>
     internal static bool StoresClosedForFestival()
     {
-        if (IsFestivalDayAdjustedForConfig(Game1.dayOfMonth, Game1.currentSeason, "Town"))
+        if (IsFestivalDayAdjustedForConfig("Town"))
         {
             return Utility.getStartTimeOfFestival() < 1900;
         }
@@ -76,17 +79,15 @@ internal static class HSUtils
     /// <summary>
     /// Whether or not the festival should be open or something.
     /// </summary>
-    /// <param name="day">Day of month.</param>
-    /// <param name="season">Season (as string).</param>
     /// <param name="mapname">Map to search for.</param>
     /// <returns>If it should be considered a festival day for this specific config.</returns>
-    internal static bool IsFestivalDayAdjustedForConfig(int day, string season, string mapname)
+    internal static bool IsFestivalDayAdjustedForConfig(string mapname)
     {
         return ModEntry.Config.StoreFestivalBehavior switch
         {
             FestivalsShopBehavior.Open => false,
-            FestivalsShopBehavior.Closed => Utility.isFestivalDay(day, season),
-            FestivalsShopBehavior.MapDependent => IsFestivalDayForMap(day, season, mapname),
+            FestivalsShopBehavior.Closed => Utility.isFestivalDay(),
+            FestivalsShopBehavior.MapDependent => IsFestivalDayForMap(Game1.dayOfMonth, Game1.season, mapname),
             _ => TKThrowHelper.ThrowUnexpectedEnumValueException<FestivalsShopBehavior, bool>(ModEntry.Config.StoreFestivalBehavior),
         };
     }
@@ -98,28 +99,61 @@ internal static class HSUtils
     /// <param name="season">season.</param>
     /// <param name="mapname">the map name.</param>
     /// <returns>true if it should be considered a festival day.</returns>
-    internal static bool IsFestivalDayForMap(int day, string season, string mapname)
+    internal static bool IsFestivalDayForMap(int day, Season season, string mapname)
     {
-        string? s = season + day;
+        string? s = Utility.getSeasonKey(season) + day;
         if (Game1.temporaryContent.Load<Dictionary<string, string>>(@"Data\Festivals\FestivalDates").ContainsKey(s))
         {
-            int index = mapname.IndexOf('_');
-            ReadOnlySpan<char> mapRegion;
-            if (index == -1)
+            ReadOnlySpan<char> mapRegion = [];
+
+            if (Game1.getLocationFromName(mapname) is { } loc)
+            {
+                var contextId = loc.GetLocationContextId();
+
+                if (Game1.locationContextData.TryGetValue(contextId, out var context))
+                {
+                    var visited = _visited.Value!;
+                    visited.Clear();
+                    visited.Add(contextId);
+
+                    while (context.CopyWeatherFromLocation is { } next)
+                    {
+                        if (!Game1.locationContextData.TryGetValue(next, out var nextData))
+                        {
+                            ModEntry.ModMonitor.Log($"Could not find location data corresponding to {next}, skipping.");
+                            break;
+                        }
+                        else
+                        {
+                            contextId = next;
+                            context = nextData;
+                        }
+                    }
+
+                    if (contextId != "Default")
+                    {
+                        mapRegion = contextId;
+                    }
+                }
+            }
+
+            if (mapRegion.IsEmpty)
+            {
+                ReadOnlySpan<char> mapNameSpan = mapname.AsSpan();
+                string default_area = "Town";
+
+                if (mapNameSpan.StartsWith("Custom_", StringComparison.Ordinal))
+                {
+                    mapNameSpan = mapNameSpan["Custom_".Length..];
+                    default_area = "CustomArea";
+                }
+                int index = mapNameSpan.IndexOf('_');
+                mapRegion = index == -1 ? default_area : mapNameSpan[..index];
+            }
+
+            if (mapRegion.IsEmpty)
             {
                 mapRegion = "Town";
-            }
-            else
-            {
-                index = mapname.IndexOf('_', index + 1);
-                if (index == -1)
-                {
-                    mapRegion = "CustomMapRegion";
-                }
-                else
-                {
-                    mapRegion = mapname.AsSpan()[..index];
-                }
             }
 
             try
@@ -145,9 +179,13 @@ internal static class HSUtils
                     return false;
                 }
             }
+            catch (ContentLoadException)
+            {
+                ModEntry.ModMonitor.Log($"Festival data for {season} {day} was not found.", LogLevel.Warn);
+            }
             catch (Exception ex)
             {
-                ModEntry.ModMonitor.Log($"Error loading festival data for {season} {day}.\n\n{ex}", LogLevel.Error);
+                ModEntry.ModMonitor.LogError($"loading festival data for {season} {day}", ex);
             }
         }
         return false;

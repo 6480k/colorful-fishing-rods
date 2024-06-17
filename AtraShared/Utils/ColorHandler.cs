@@ -16,12 +16,12 @@ public static class ColorHandler
     /// Reflect for all the colors defined by Skia, XNA, and Microsoft.
     /// </summary>
     /// <remarks>There's probably a lot of repeats, but hey, this runs once.</remarks>
-    private static readonly Lazy<Dictionary<string, XNAColor>> colors = new(() =>
+    private static readonly Lazy<Dictionary<string, XNAColor>> colors = new(static () =>
     {
-        Dictionary<string, XNAColor>? colors = new(StringComparer.InvariantCultureIgnoreCase);
+        Dictionary<string, XNAColor>? colors = new(StringComparer.OrdinalIgnoreCase);
 
         foreach (PropertyInfo? color in typeof(SKColors).GetProperties(BindingFlags.Static | BindingFlags.Public)
-                      .Where((prop) => prop.PropertyType == typeof(SKColor)))
+                      .Where(static (prop) => prop.PropertyType == typeof(SKColor)))
         {
             colors[color.Name] = ((SKColor)color.GetValue(null)!).ToXNAColor();
         }
@@ -48,13 +48,15 @@ public static class ColorHandler
         return colors;
     });
 
+    private static readonly char[] Valid_Split_Chars = ['/', ',', ';', ' '];
+
     /// <summary>
     /// Tries to parse a user string to an XNAcolor.
     /// </summary>
     /// <param name="colorname">user string.</param>
     /// <param name="color">XNAcolor.</param>
     /// <returns>True if successful, false otherwise.</returns>
-    public static bool TryParseColor(string colorname, out XNAColor color)
+    public static bool TryParseColor(string? colorname, out XNAColor color)
     {
         if (string.IsNullOrWhiteSpace(colorname))
         {
@@ -86,7 +88,7 @@ public static class ColorHandler
                     goto ColorParseFail;
             }
             ReadOnlySpan<char> span = colorname.AsSpan();
-            byte[] array = { 255, 255, 255, 255 };
+            byte[] array = [255, 255, 255, 255];
             for (int i = 0; i < 4; i++)
             {
                 if (i == 3 && colorname.Length is 4 or 7)
@@ -109,16 +111,22 @@ public static class ColorHandler
         }
 
         // Try to split and process it that way?
-        SpanSplit splits = colorname.SpanSplit(new[] { '/', ',', ';' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries, 4);
-        if (!splits.TryGetAtIndex(2, out _))
-        {
-            goto ColorParseFail;
-        }
+        StreamSplit splits = colorname.StreamSplit(Valid_Split_Chars, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
-        byte[] vals = new byte[splits.TryGetAtIndex(3, out _) ? 4 : 3];
+        byte[] vals = [255, 255, 255, 255];
         for (int i = 0; i < vals.Length; i++)
         {
-            ReadOnlySpan<char> split = splits[i].Word.Trim();
+            if (splits.MoveNext())
+            {
+                if (i == 3)
+                {
+                    break;
+                }
+
+                goto ColorParseFail;
+            }
+
+            ReadOnlySpan<char> split = splits.Current.Word.Trim();
             bool percent = false;
             if (split.EndsWith("%"))
             {
@@ -134,9 +142,8 @@ public static class ColorHandler
                 goto ColorParseFail;
             }
         }
-        color = vals.Length >= 4
-            ? new(vals[0], vals[1], vals[2], vals[3])
-            : new(vals[0], vals[1], vals[2]);
+
+        color = new(vals[0], vals[1], vals[2], vals[3]);
         return true;
 
 ColorParseFail:

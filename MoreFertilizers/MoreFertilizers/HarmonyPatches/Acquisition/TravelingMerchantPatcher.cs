@@ -1,6 +1,8 @@
 ﻿using AtraBase.Toolkit.Extensions;
 
 using AtraShared.Caching;
+using AtraShared.ConstantsAndEnums;
+using AtraShared.Utils.Extensions;
 
 using HarmonyLib;
 
@@ -20,23 +22,25 @@ internal static class TravelingMerchantPatcher
 
     [UsedImplicitly]
     [HarmonyPatch("generateLocalTravelingMerchantStock")]
-    [SuppressMessage("StyleCop.CSharp.NamingRules", "SA1313:Parameter names should begin with lower-case letter", Justification = "Harmony Convention")]
     private static void Postfix(Dictionary<ISalable, int[]> __result, int seed)
     {
-        Random random = new(seed);
-        random.PreWarm();
-        if (ModEntry.SecretJojaFertilizerID != -1 && Game1.player.DailyLuck > 0.5 && random.NextDouble() < 0.05)
+        try
         {
-            __result.Add(new SObject(ModEntry.SecretJojaFertilizerID, 1), new[] { (int)(2500 * Game1.player.difficultyModifier), 1 });
-        }
+            Random random = new(seed);
+            random.PreWarm();
 
-        if (ModEntry.BountifulBushID != -1 && Game1.currentSeason is "spring" or "fall" && HasPlayerUnlockedBountiful.GetValue())
-        {
-            __result.Add(new SObject(ModEntry.BountifulBushID, 1), new[] { 200, random.Next(1, 3) });
+            if (ModEntry.BountifulBushID != -1 && Game1.currentSeason is "spring" or "fall" && HasPlayerUnlockedBountiful.GetValue())
+            {
+                __result.Add(new SObject(ModEntry.BountifulBushID, 1), new[] { 200, random.Next(1, 3) });
+            }
+            else if (ModEntry.WisdomFertilizerID != -1 && Game1.currentSeason is "summer" or "winter")
+            {
+                __result.Add(new SObject(ModEntry.WisdomFertilizerID, 1), new[] { 100, random.Next(1, 3) });
+            }
         }
-        else if (ModEntry.WisdomFertilizerID != -1 && Game1.currentSeason is "summer" or "winter")
+        catch (Exception ex)
         {
-            __result.Add(new SObject(ModEntry.WisdomFertilizerID, 1), new[] { 100, random.Next(1, 3) });
+            ModEntry.ModMonitor.LogError("adding to traveling cart", ex);
         }
     }
 }

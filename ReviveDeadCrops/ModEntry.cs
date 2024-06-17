@@ -1,10 +1,9 @@
-﻿using AtraShared.ConstantsAndEnums;
-using AtraShared.Integrations;
-using AtraShared.Integrations.Interfaces;
+﻿// Ignore Spelling: Api
+
+using AtraCore.Framework.Internal;
+
 using AtraShared.Menuing;
 using AtraShared.Utils.Extensions;
-
-using HarmonyLib;
 
 using ReviveDeadCrops.Framework;
 
@@ -16,32 +15,12 @@ using StardewValley.TerrainFeatures;
 namespace ReviveDeadCrops;
 
 /// <inheritdoc />
-internal sealed class ModEntry : Mod
+internal sealed class ModEntry : BaseMod<ModEntry>
 {
-    private static IJsonAssetsAPI? jaAPI;
-
-    private static int everlastingID = -1;
-
     /// <summary>
     /// Gets the id of the everlasting fertilizer.
     /// </summary>
-    internal static int EverlastingID
-    {
-        get
-        {
-            if (everlastingID == -1)
-            {
-                everlastingID = jaAPI?.GetObjectId("Everlasting Fertilizer - More Fertilizers") ?? -1;
-            }
-
-            return everlastingID;
-        }
-    }
-
-    /// <summary>
-    /// Gets the logging instance for this mod.
-    /// </summary>
-    internal static IMonitor ModMonitor { get; private set; } = null!;
+    internal const string EverlastingID = "atravita.EverlastingFertilizer";
 
     /// <summary>
     /// Gets the API for this mod.
@@ -51,33 +30,14 @@ internal sealed class ModEntry : Mod
     /// <inheritdoc />
     public override void Entry(IModHelper helper)
     {
-        ModMonitor = this.Monitor;
-
-        helper.Events.GameLoop.GameLaunched += this.OnGameLaunched;
+        base.Entry(helper);
         helper.Events.Input.ButtonPressed += this.OnButtonPressed;
         helper.Events.GameLoop.DayEnding += this.OnDayEnd;
-
-        helper.Events.GameLoop.ReturnedToTitle += this.OnReturnedToTitle;
-
-        this.Monitor.Log($"Starting up: {this.ModManifest.UniqueID} - {typeof(ModEntry).Assembly.FullName}");
-
-        this.ApplyPatches(new Harmony(this.ModManifest.UniqueID));
     }
 
     /// <inheritdoc />
     [UsedImplicitly]
     public override object? GetApi() => Api;
-
-    /// <inheritdoc cref="IGameLoopEvents.GameLaunched"/>
-    private void OnGameLaunched(object? sender, GameLaunchedEventArgs e)
-    {
-        IntegrationHelper helper = new(this.Monitor, this.Helper.Translation, this.Helper.ModRegistry, LogLevel.Trace);
-        _ = helper.TryGetAPI("spacechase0.JsonAssets", "1.10.3", out jaAPI);
-    }
-
-    /// <inheritdoc cref="IGameLoopEvents.ReturnedToTitle"/>
-    private void OnReturnedToTitle(object? sender, ReturnedToTitleEventArgs e)
-        => everlastingID = -1;
 
     // we need to make sure to slot in before Solid Foundations removes its buildings.
     [EventPriority(EventPriority.High + 20)]
@@ -89,12 +49,12 @@ internal sealed class ModEntry : Mod
         }
         Api.Changed = false;
 
-        Utility.ForAllLocations(
+        Utility.ForEachLocation(
             action: (location) =>
             {
                 if (location is null)
                 {
-                    return;
+                    return true;
                 }
 
                 foreach (TerrainFeature terrain in location.terrainFeatures.Values)
@@ -102,8 +62,8 @@ internal sealed class ModEntry : Mod
                     if (terrain is HoeDirt dirt && dirt.modData?.GetBool(ReviveDeadCropsApi.REVIVED_PLANT_MARKER) == true
                         && dirt.crop is not null && dirt.fertilizer.Value != EverlastingID)
                     {
-                        this.Monitor.DebugOnlyLog($"Found dirt with marker at {dirt.currentTileLocation} with crop {dirt.crop?.indexOfHarvest ?? -1}");
-                        dirt.modData.SetBool(ReviveDeadCropsApi.REVIVED_PLANT_MARKER, false, false);
+                        this.Monitor.DebugOnlyLog($"Found dirt with marker at {dirt.Tile} with crop {dirt.crop?.indexOfHarvest.Value ?? "null"}");
+                        dirt.modData?.SetBool(ReviveDeadCropsApi.REVIVED_PLANT_MARKER, false, false);
                         dirt.crop?.Kill();
                     }
                 }
@@ -114,29 +74,14 @@ internal sealed class ModEntry : Mod
                         && dirt.modData?.GetBool(ReviveDeadCropsApi.REVIVED_PLANT_MARKER) == true
                         && dirt.crop is not null && dirt.fertilizer.Value != EverlastingID)
                     {
-                        this.Monitor.DebugOnlyLog($"Found dirt with marker at {dirt.currentTileLocation} with crop {dirt.crop?.indexOfHarvest ?? -1}");
-                        dirt.modData.SetBool(ReviveDeadCropsApi.REVIVED_PLANT_MARKER, false, false);
+                        this.Monitor.DebugOnlyLog($"Found dirt with marker at {dirt.Tile} with crop {dirt.crop?.indexOfHarvest.Value ?? "null"}");
+                        dirt.modData?.SetBool(ReviveDeadCropsApi.REVIVED_PLANT_MARKER, false, false);
                         dirt.crop?.Kill();
                     }
                 }
-            });
-    }
 
-    /// <summary>
-    /// Applies the patches for this mod.
-    /// </summary>
-    /// <param name="harmony">This mod's harmony instance.</param>
-    private void ApplyPatches(Harmony harmony)
-    {
-        try
-        {
-            harmony.PatchAll(typeof(ModEntry).Assembly);
-        }
-        catch (Exception ex)
-        {
-            ModMonitor.Log(string.Format(ErrorMessageConsts.HARMONYCRASH, ex), LogLevel.Error);
-        }
-        harmony.Snitch(this.Monitor, this.ModManifest.UniqueID, transpilersOnly: true);
+                return true;
+            });
     }
 
     private void OnButtonPressed(object? sender, ButtonPressedEventArgs e)

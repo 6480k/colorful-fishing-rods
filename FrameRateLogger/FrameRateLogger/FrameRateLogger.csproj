@@ -9,7 +9,7 @@
   <PropertyGroup>
     <Name>Frame Rate Logger</Name>
     <Description>Logs the current frame rate.</Description>
-    <Version>0.1.1</Version>
+    <Version>0.1.2</Version>
     <UpdateKeys>Nexus:15002</UpdateKeys>
   </PropertyGroup>
 
@@ -21,6 +21,10 @@
     <Using Alias="NotNullAttribute" Include="System.Diagnostics.CodeAnalysis.NotNullAttribute" />
     <Using Alias="Object" Include="System.Object" />
     <Using Alias="SObject" Include="StardewValley.Object" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Update="JetBrains.Annotations" Version="2023.3.0" />
   </ItemGroup>
 
 </Project>

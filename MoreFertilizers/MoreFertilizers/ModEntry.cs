@@ -1,4 +1,6 @@
-﻿#if DEBUG
+﻿// Ignore Spelling: Api
+
+#if DEBUG
 using System.Diagnostics;
 #endif
 using System.Runtime.CompilerServices;
@@ -19,8 +21,7 @@ using AtraShared.Utils.Shims;
 using CommunityToolkit.Diagnostics;
 
 using HarmonyLib;
-
-using MoreFertilizers.DataModels;
+using MoreFertilizers.DataModels.Legacy;
 using MoreFertilizers.Framework;
 using MoreFertilizers.HarmonyPatches;
 using MoreFertilizers.HarmonyPatches.Acquisition;
@@ -41,7 +42,6 @@ using AtraUtils = AtraShared.Utils.Utils;
 namespace MoreFertilizers;
 
 /// <inheritdoc />
-[SuppressMessage("StyleCop.CSharp.ReadabilityRules", "SA1124:Do not use regions", Justification = "Reviewed.")]
 internal sealed class ModEntry : Mod
 {
     private const string SavedIDKey = "MFSavedObjectID";
@@ -52,16 +52,10 @@ internal sealed class ModEntry : Mod
     private MigrationManager? migrator;
 
     private Dictionary<int, int>? idmap;
-    private ISolidFoundationsAPI? solidFoundationsAPI;
 
     #region IDs
 
 #pragma warning disable SA1201 // Elements should appear in the correct order
-
-    /// <summary>
-    /// Gets a reference to the JA API.
-    /// </summary>
-    internal static IJsonAssetsAPI? JsonAssetsAPI => jsonAssets;
 
     private static int prismaticFertilizerID = -1;
 
@@ -318,22 +312,10 @@ internal sealed class ModEntry : Mod
         }
     }
 
-    private static int jojaFertilizerID = -1;
-
     /// <summary>
-    /// Gets the integer ID of Joja's fertilizer. -1 if not found/not loaded yet.
+    /// Gets the string ID of Joja's fertilizer
     /// </summary>
-    internal static int JojaFertilizerID
-    {
-        get
-        {
-            if (jojaFertilizerID == -1)
-            {
-                jojaFertilizerID = jsonAssets?.GetObjectId("Joja Fertilizer - More Fertilizers") ?? -1;
-            }
-            return jojaFertilizerID;
-        }
-    }
+    internal const string JojaFertilizerID = "atravita.CP.MoreFertilizers.JojaFertilizer";
 
     private static int deluxeJojaFertilizerID = -1;
 
@@ -443,7 +425,7 @@ internal sealed class ModEntry : Mod
     /// <summary>
     /// Gets a list of fertilizer IDs for fertilizers that are meant to be planted into HoeDirt.
     /// </summary>
-    /// <remarks>Will be stored in the <see cref="HoeDirt.fertilizer.Value"/> field.</remarks>
+    /// <remarks>Will be stored in the <see cref="HoeDirt.fertilizer"/> field.</remarks>
     internal static HashSet<int> PlantableFertilizerIDs { get; } = new ();
 
     /// <summary>
@@ -496,7 +478,7 @@ internal sealed class ModEntry : Mod
         ModContentHelper = helper.ModContent;
         ModMonitor = this.Monitor;
         DIRPATH = helper.DirectoryPath;
-        UNIQUEID = this.ModManifest.UniqueID;
+        UNIQUEID = string.Intern(this.ModManifest.UniqueID);
         Config = AtraUtils.GetConfigOrDefault<ModConfig>(helper, this.Monitor);
 
         helper.Events.GameLoop.GameLaunched += this.OnGameLaunched;
@@ -535,7 +517,7 @@ internal sealed class ModEntry : Mod
                 }
                 else if (terrainFeature is FruitTree fruitTree)
                 {
-                    this.Monitor.Log($"{e.Cursor.Tile} is on {fruitTree.treeType.Value} with {fruitTree.daysUntilMature.Value}.", LogLevel.Info);
+                    this.Monitor.Log($"{e.Cursor.Tile} is on {fruitTree.treeId.Value} with {fruitTree.daysUntilMature.Value}.", LogLevel.Info);
                 }
                 else if (terrainFeature is Tree tree)
                 {
@@ -551,89 +533,14 @@ internal sealed class ModEntry : Mod
                     this.Monitor.Log($"{e.Cursor.Tile} has {fertilizer} fertilizer.", LogLevel.Info);
                 }
             }
-            if (Game1.currentLocation?.modData?.GetInt(CanPlaceHandler.FishFood) is > 0)
+            if (Game1.currentLocation?.isWaterTile((int)e.Cursor.Tile.X, (int)e.Cursor.Tile.Y) == true
+                && Game1.currentLocation.modData?.GetInt(CanPlaceHandler.FishFood) is > 0)
             {
                 this.Monitor.Log($"FishFood: Remaining time: {Game1.currentLocation?.modData?.GetInt(CanPlaceHandler.FishFood)}", LogLevel.Info);
             }
         }
     }
 #endif
-
-    [EventPriority(EventPriority.High)]
-    private void OnReturnedToTitle(object? sender, ReturnedToTitleEventArgs e)
-    {
-        // JA will reassign us IDs when it returns to title.
-        // (I'm not quite sure why?)
-        // But we need to drop our IDs too.
-        bountifulBushID = -1;
-        bountifulFertilizerID = -1;
-        deluxeFishFoodID = -1;
-        deluxeFruitTreeFertilizerID = -1;
-        deluxeJojaFertilizerID = -1;
-        domesticatedFishFoodID = -1;
-        everlastingFertilizerID = -1;
-        everlastingFruitTreeFertilizerID = -1;
-        fishfoodID = -1;
-        fruitTreeFertilizerID = -1;
-        jojaFertilizerID = -1;
-        luckyFertilizerID = -1;
-        miraculousBeverages = -1;
-        organicFertilizerID = -1;
-        paddyCropFertilizerID = -1;
-        prismaticFertilizerID = -1;
-        rapidBushFertilizerID = -1;
-        secretJojaFertilizerID = -1;
-        seedyFertilizerID = -1;
-        treeTapperFertilizerID = -1;
-        wisdomFertilizerID = -1;
-        radioactiveFertilizerID = -1;
-
-        PlantableFertilizerIDs.Clear();
-        SpecialFertilizerIDs.Clear();
-    }
-
-    /// <summary>
-    /// When safely saved, also save the ids for each fertilizer.
-    /// </summary>
-    /// <param name="sender">SMAPI.</param>
-    /// <param name="e">Event arguments.</param>
-    private void OnSaving(object? sender, SavingEventArgs e)
-    {
-        this.Helper.Events.GameLoop.Saving -= this.OnSaving;
-        if (!Context.IsMainPlayer)
-        {
-            return;
-        }
-
-        // TODO: This should be doable with expression trees in a less dumb way.
-        storedIDs ??= new()
-            {
-                BountifulBushID = BountifulBushID,
-                BountifulFertilizerID = BountifulFertilizerID,
-                DeluxeFishFoodID = DeluxeFishFoodID,
-                DeluxeFruitTreeFertilizerID = DeluxeFruitTreeFertilizerID,
-                DeluxeJojaFertilizerID = DeluxeJojaFertilizerID,
-                DomesticatedFishFoodID = DomesticatedFishFoodID,
-                EverlastingFertilizerID = EverlastingFertilizerID,
-                EverlastingFruitTreeFertilizerID = EverlastingFruitTreeFertilizerID,
-                FishFoodID = FishFoodID,
-                FruitTreeFertilizerID = FruitTreeFertilizerID,
-                JojaFertilizerID = JojaFertilizerID,
-                LuckyFertilizerID = LuckyFertilizerID,
-                MiraculousBeveragesID = MiraculousBeveragesID,
-                OrganicFertilizerID = OrganicFertilizerID,
-                PaddyFertilizerID = PaddyCropFertilizerID,
-                PrismaticFertilizerID = PrismaticFertilizerID,
-                RapidBushFertilizerID = RapidBushFertilizerID,
-                SecretJojaFertilizerID = SecretJojaFertilizerID,
-                SeedyFertilizerID = SeedyFertilizerID,
-                TreeTapperFertilizerID = TreeTapperFertilizerID,
-                WisdomFertilizerID = WisdomFertilizerID,
-                RadioactiveFertilizerID = RadioactiveFertilizerID,
-            };
-        this.Helper.Data.WriteSaveData(SavedIDKey, storedIDs);
-        this.Monitor.Log("Writing IDs into save data");
-    }
 
     /// <summary>
     /// Applies the patches for this mod.
@@ -662,28 +569,6 @@ internal sealed class ModEntry : Mod
                 HoeDirtDrawTranspiler.ApplyPatches(harmony);
             }
 
-            if (!this.Helper.ModRegistry.IsLoaded("Digus.ProducerFrameworkMod"))
-            {
-                PerformObjectDropInTranspiler.ApplyPatches(harmony);
-            }
-            else if (this.Helper.ModRegistry.Get("Digus.PFMAutomate") is IModInfo pfmAutomate
-                && pfmAutomate.Manifest.Version.IsNewerThan("1.4.1"))
-            {
-                this.Monitor.Log("Found PFMAutomate, transpiling PFM to support that.", LogLevel.Info);
-                PFMAutomateTranspilers.ApplyPatches(harmony);
-            }
-
-            if (this.Helper.ModRegistry.Get("spacechase0.DynamicGameAssets") is IModInfo dga
-                && dga.Manifest.Version.IsNewerThan("1.4.1"))
-            {
-                this.Monitor.Log("Found Dynamic Game Assets, applying compat patches", LogLevel.Info);
-                FruitTreeDayUpdateTranspiler.ApplyDGAPatch(harmony);
-                FruitTreeDrawTranspiler.ApplyDGAPatch(harmony);
-                CropHarvestTranspiler.ApplyDGAPatch(harmony);
-                SObjectPatches.ApplyDGAPatch(harmony);
-                CropNewDayTranspiler.ApplyDGAPatches(harmony);
-            }
-
             if (this.Helper.ModRegistry.Get("PeacefulEnd.AlternativeTextures") is IModInfo at
                 && at.Manifest.Version.IsNewerThan("6.0.0"))
             {
@@ -696,14 +581,6 @@ internal sealed class ModEntry : Mod
             {
                 this.Monitor.Log("Found MultiYieldCrops, applying compat patches", LogLevel.Info);
                 MultiYieldCropsCompat.ApplyPatches(harmony);
-            }
-
-            if (this.Helper.ModRegistry.Get("Pathoschild.Automate") is IModInfo automate
-                && automate.Manifest.Version.IsNewerThan("1.25.2"))
-            {
-                this.Monitor.Log("Found Automate, applying compat patches", LogLevel.Info);
-                AutomateTranspiler.ApplyPatches(harmony);
-                PerformObjectDropInTranspiler.ApplyAutomateTranspiler(harmony);
             }
 
             if (this.Helper.ModRegistry.Get("Satozaki.MillerTime") is IModInfo millerTime
@@ -741,25 +618,14 @@ internal sealed class ModEntry : Mod
         harmony.Snitch(this.Monitor, harmony.Id, transpilersOnly: true);
 #if DEBUG
         sw.Stop();
-        this.Monitor.Log($"took {sw.ElapsedMilliseconds} ms to apply harmony patches", LogLevel.Info);
+        this.Monitor.LogTimespan("Applying harmony patches", sw);
 #endif
     }
 
     private void OnGameLaunched(object? sender, GameLaunchedEventArgs e)
     {
-        IntegrationHelper jaHelper = new(this.Monitor, this.Helper.Translation, this.Helper.ModRegistry, LogLevel.Warn);
-        if (!jaHelper.TryGetAPI("spacechase0.JsonAssets", "1.10.3", out jsonAssets))
-        {
-            this.Monitor.Log("Packs could not be loaded! This mod will probably not function.", LogLevel.Error);
-            return;
-        }
-        jsonAssets.LoadAssets(Path.Combine(this.Helper.DirectoryPath, "assets", "json-assets"), this.Helper.Translation);
-
         RadioactiveFertilizerHandler.Initialize(this.Helper.GameContent, this.Helper.ModRegistry, this.Helper.Translation);
-
-        // Only register for events if JA pack loading was successful.
         this.Helper.Events.GameLoop.SaveLoaded += this.OnSaveLoaded;
-        this.Helper.Events.GameLoop.ReturnedToTitle += this.OnReturnedToTitle;
 
         this.Helper.Events.Multiplayer.ModMessageReceived += this.Multiplayer_ModMessageReceived;
         this.Helper.Events.Multiplayer.PeerConnected += this.Multiplayer_PeerConnected;
@@ -772,11 +638,6 @@ internal sealed class ModEntry : Mod
 
         this.Helper.Events.Content.AssetRequested += static (_, e) => AssetEditor.Edit(e);
         this.Helper.Events.Content.AssetsInvalidated += this.OnAssetInvalidated;
-
-        if (this.Helper.ModRegistry.IsLoaded("atravita.SpecialOrdersExtended"))
-        {
-            this.Helper.Events.Content.AssetRequested += static (_, e) => AssetEditor.EditSpecialOrderDialogue(e);
-        }
 
         // Apply harmony patches.
         this.ApplyPatches(new Harmony(this.ModManifest.UniqueID));
@@ -967,14 +828,11 @@ internal sealed class ModEntry : Mod
         {
             ModMonitor.Log("No need to fix IDs, not installed before.");
 
-            this.Helper.Events.GameLoop.Saving -= this.OnSaving;
-            this.Helper.Events.GameLoop.Saving += this.OnSaving;
-
             return;
         }
         storedIDs = storedIDCls;
 
-        Dictionary<int, int> idMapping = new();
+        Dictionary<int, int> idMapping = [];
 
         // special case! Update the museum reward tracking too...
         if (PrismaticFertilizerID != -1)
@@ -1157,54 +1015,13 @@ internal sealed class ModEntry : Mod
             return;
         }
 
-        this.Helper.Events.GameLoop.Saving -= this.OnSaving;
-        this.Helper.Events.GameLoop.Saving += this.OnSaving;
-
-        // Grab the SF API to deshuffle in there too.
-        IntegrationHelper helper = new(this.Monitor, this.Helper.Translation, this.Helper.ModRegistry, LogLevel.Trace);
-        if (this.solidFoundationsAPI is not null || helper.TryGetAPI("PeacefulEnd.SolidFoundations", "1.12.1", out this.solidFoundationsAPI))
+        Utility.ForEachLocation((GameLocation loc) =>
         {
-            this.idmap = idMapping;
-            this.solidFoundationsAPI.AfterBuildingRestoration -= this.AfterSFBuildingRestore;
-            this.solidFoundationsAPI.AfterBuildingRestoration += this.AfterSFBuildingRestore;
-        }
-
-        Utility.ForAllLocations((GameLocation loc) => loc.FixHoeDirtInLocation(idMapping));
+            loc.FixHoeDirtInLocation(idMapping);
+            return true;
+        });
 
         ModMonitor.Log($"Fixed IDs! {string.Join(", ", idMapping.Select((kvp) => $"{kvp.Key}=>{kvp.Value}"))}");
-    }
-
-    private void AfterSFBuildingRestore(object? sender, EventArgs e)
-    {
-        // unhook event
-        this.solidFoundationsAPI!.AfterBuildingRestoration -= this.AfterSFBuildingRestore;
-        try
-        {
-            if (SolidFoundationShims.IsSFBuilding is null)
-            {
-                this.Monitor.Log("Could not get a handle on SF's building class, deshuffling code will fail!", LogLevel.Error);
-            }
-            else if (this.idmap is null)
-            {
-                this.Monitor.Log("IdMap was not set correctly, deshuffling code will fail.", LogLevel.Error);
-            }
-            else
-            {
-                foreach (Building? building in GameLocationUtils.GetBuildings())
-                {
-                    if (SolidFoundationShims.IsSFBuilding?.Invoke(building) == true)
-                    {
-                        building.indoors.Value?.FixHoeDirtInLocation(this.idmap);
-                    }
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            this.Monitor.Log($"Failed while attempting to deshuffle in SF buildings:\n\n{ex}", LogLevel.Error);
-        }
-        this.idmap = null;
-        this.solidFoundationsAPI = null;
     }
 
     #endregion
@@ -1225,12 +1042,6 @@ internal sealed class ModEntry : Mod
         MiraculousFertilizerHandler.Initialize();
         MultiplayerHelpers.AssertMultiplayerVersions(this.Helper.Multiplayer, this.ModManifest, this.Monitor, this.Helper.Translation);
 
-        IntegrationHelper pfmHelper = new(this.Monitor, this.Helper.Translation, this.Helper.ModRegistry, LogLevel.Trace);
-        if (pfmHelper.TryGetAPI("Digus.ProducerFrameworkMod", "1.7.4", out IProducerFrameworkModAPI? pfmAPI))
-        {
-            pfmAPI.AddContentPack(Path.Combine(this.Helper.DirectoryPath, "assets", "pfm-assets"));
-        }
-
         this.migrator = new(this.ModManifest, this.Helper, this.Monitor);
 
         if (!this.migrator.CheckVersionInfo())
@@ -1242,7 +1053,7 @@ internal sealed class ModEntry : Mod
             }
             catch (Exception ex)
             {
-                this.Monitor.Log($"Failed while attempting to run migrations.\n\n{ex}");
+                this.Monitor.LogError("attempting to run migrations", ex);
             }
         }
         else

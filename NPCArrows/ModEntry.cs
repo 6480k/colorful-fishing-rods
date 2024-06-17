@@ -1,29 +1,24 @@
-﻿using AtraShared.ConstantsAndEnums;
+﻿namespace NPCArrows;
 
-using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Graphics;
+using AtraCore.Framework.Caches;
+using AtraCore.Framework.Internal;
 
 using NPCArrows.Framework;
+using NPCArrows.Framework.Monitors;
+using NPCArrows.Framework.NPCs;
 
 using StardewModdingAPI.Events;
 
-using StardewValley;
-
-namespace NPCArrows;
+using StardewValley.Characters;
 
 /// <inheritdoc />
-internal sealed class ModEntry : Mod
+internal sealed class ModEntry : BaseMod<ModEntry>
 {
-    /// <summary>
-    /// Gets the logging instance for this mod.
-    /// </summary>
-    internal static IMonitor ModMonitor { get; private set; } = null!;
-
     /// <inheritdoc />
     public override void Entry(IModHelper helper)
     {
         I18n.Init(helper.Translation);
-        ModMonitor = this.Monitor;
+        base.Entry(helper);
 
         AssetManager.Initialize(helper.GameContent);
 
@@ -31,74 +26,38 @@ internal sealed class ModEntry : Mod
         helper.Events.Content.AssetsInvalidated += static (_, e) => AssetManager.Reset(e.NamesWithoutLocale);
 
         helper.Events.Display.RenderedHud += this.Display_RenderedHud;
+
+        helper.Events.GameLoop.SaveLoaded += this.OnSaveLoaded;
+    }
+
+    private void OnSaveLoaded(object? sender, SaveLoadedEventArgs e)
+    {
+        NPC? lewis = NPCCache.GetByVillagerName("Lewis", true);
+
+        Friendship lewisFriendship = Game1.player.friendshipData["Lewis"];
+
+        BasicFriendshipMonitor monitor = new BasicFriendshipMonitor(lewisFriendship, lewis!);
     }
 
     private void Display_RenderedHud(object? sender, RenderedHudEventArgs e)
     {
-        if (Context.IsPlayerFree && Game1.currentLocation?.characters is { } characters)
-        {
-            foreach (NPC? character in characters)
-            {
-                if (character?.CanSocialize != true)
-                {
-                    continue;
-                }
-
-                DrawArrowForNPC(e.SpriteBatch, character);
-            }
-        }
-    }
-
-    /// <summary>
-    /// Draws in an arrow pointing at an NPC.
-    /// </summary>
-    /// <param name="spriteBatch">Sprite batch to use.</param>
-    /// <param name="character">Character to draw arrow pointing at.</param>
-    private static void DrawArrowForNPC(SpriteBatch spriteBatch, NPC character)
-    {
-        Vector2 pos = character.Position + new Vector2(32f, 64f);
-
-        Vector2 arrowPos = Game1.GlobalToLocal(Game1.uiViewport, pos);
-        Direction direction = Direction.None;
-
-        if (arrowPos.X <= 0)
-        {
-            direction |= Direction.Left;
-            arrowPos.X = 8f;
-        }
-        else if (arrowPos.X >= Game1.viewport.Width)
-        {
-            direction |= Direction.Right;
-            arrowPos.X = Game1.viewport.Width - 8f;
-        }
-
-        if (arrowPos.Y <= 0)
-        {
-            direction |= Direction.Up;
-            arrowPos.Y = 8f;
-        }
-        else if (arrowPos.Y >= Game1.viewport.Height)
-        {
-            direction |= Direction.Down;
-            arrowPos.Y = Game1.viewport.Height - 8f;
-        }
-
-        if (direction == Direction.None)
+        if (Game1.game1.takingMapScreenshot || Game1.farmEvent is not null || !Context.IsPlayerFree)
         {
             return;
         }
 
-        arrowPos = Utility.snapToInt(arrowPos);
+        IList<NPC>? characters = Game1.CurrentEvent?.actors;
+        characters ??= Game1.currentLocation?.characters;
 
-        spriteBatch.Draw(
-            texture: AssetManager.ArrowTexture,
-            position: arrowPos,
-            sourceRectangle: null,
-            color: Color.MediumPurple,
-            rotation: direction.GetRotationFacing(),
-            origin: new Vector2(2f, 2f),
-            scale: Game1.pixelZoom,
-            effects: SpriteEffects.None,
-            layerDepth: 1f);
+        if (characters is not null)
+        {
+            foreach (NPC? character in characters)
+            {
+                if (character?.CanSocialize == true || character is Child)
+                {
+                    character.DrawArrow(e.SpriteBatch);
+                }
+            }
+        }
     }
 }

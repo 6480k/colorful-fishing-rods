@@ -1,4 +1,7 @@
-﻿using HarmonyLib;
+﻿using AtraShared.Utils.Extensions;
+using HarmonyLib;
+
+using StardewValley.Quests;
 
 using AtraUtils = AtraShared.Utils.Utils;
 
@@ -22,27 +25,36 @@ internal static class AdjustQuestOfTheDay
         {
             try
             {
+                Quest? quest = null;
+
                 // just get the quest if the shops are forced open.
                 if (ModEntry.Config.StoreFestivalBehavior == FestivalsShopBehavior.Open)
                 {
-                    Game1.questOfTheDay = Utility.getQuestOfTheDay();
-                    return false;
+                    quest = Utility.getQuestOfTheDay();
                 }
 
                 // else, check if today or tomorrow is a festival day for vanilla locations.
-                if (!HSUtils.IsFestivalDayForMap(Game1.dayOfMonth, Game1.currentSeason, "Town"))
+                else if (!HSUtils.IsFestivalDayForMap(Game1.dayOfMonth, Game1.season, "Town"))
                 {
-                    (string season, int day) = AtraUtils.GetTomorrow(Game1.currentSeason, Game1.dayOfMonth);
+                    (Season season, int day) = AtraUtils.GetTomorrow(Game1.season, Game1.dayOfMonth);
                     if (!HSUtils.IsFestivalDayForMap(day, season, "Town"))
                     {
-                        Game1.questOfTheDay = Utility.getQuestOfTheDay();
+                        quest = Utility.getQuestOfTheDay();
                     }
                 }
+
+                if (quest is not null)
+                {
+                    quest.reloadObjective();
+                    quest.reloadDescription();
+                }
+
+                Game1.netWorldState.Value.SetQuestOfTheDay(quest);
                 return false;
             }
             catch (Exception ex)
             {
-                ModEntry.ModMonitor.Log($"Mod failed while adjusting Daily Quest\n\n{ex}", LogLevel.Error);
+                ModEntry.ModMonitor.LogError("adjusting Daily Quest", ex);
             }
         }
         return true;

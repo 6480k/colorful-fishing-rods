@@ -1,6 +1,10 @@
 ﻿Changelog
 =============
 
+#### Version 0.3.0
+* Update for Stardew 1.6.
+* Fix parsing for mail-gifts.
+
 #### Version 0.2.3
 * Allow you to sell and trash museum items.
 

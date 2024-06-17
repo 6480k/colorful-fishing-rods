@@ -8,6 +8,8 @@ using AtraShared.Utils.Extensions;
 using AtraShared.Utils.HarmonyHelper;
 using HarmonyLib;
 using StardewModdingAPI.Events;
+
+using StardewValley.Extensions;
 using StardewValley.Locations;
 
 namespace StopRugRemoval.HarmonyPatches.Volcano;
@@ -48,7 +50,7 @@ internal static class VolcanoChestAdjuster
     {
         if (Context.IsMultiplayer)
         {
-            multiplayer.SendMessage(data, RecieveDataValue, new[] { ModEntry.UNIQUEID }, playerIDs);
+            multiplayer.SendMessage(data, RecieveDataValue, [ModEntry.UNIQUEID], playerIDs);
         }
     }
 
@@ -82,7 +84,15 @@ internal static class VolcanoChestAdjuster
     /// <param name="multiplayerHelper">SMAPI's multiplayer helper.</param>
     internal static void SaveData(IDataHelper dataHelper, IMultiplayerHelper multiplayerHelper)
     {
-        dataHelper.WriteSaveData(SAVEDATAKEY, data);
+        if (data is not null && (data.CommonChest != -1 || data.RareChest != -1))
+        {
+            dataHelper.WriteSaveData(SAVEDATAKEY, data);
+        }
+        else
+        {
+            // erase data if it's not relevant.
+            dataHelper.WriteSaveData<VolcanoData>(SAVEDATAKEY, null);
+        }
         BroadcastData(multiplayerHelper);
     }
 
@@ -145,37 +155,46 @@ internal static class VolcanoChestAdjuster
         try
         {
             ILHelper helper = new(original, instructions, ModEntry.ModMonitor, gen);
-            helper.FindNext(new CodeInstructionWrapper[]
-            { // Find the first call to Random.Next and the local it stores to.
+
+            helper.FindNext(
+            [
+                OpCodes.Ldarg_3,
+                OpCodes.Ldc_I4_1,
+                OpCodes.Beq,
+            ])
+            .Advance(2)
+            .StoreBranchDest() // this leads to common chests.
+            .FindNext(
+            [ // Find the first call to Random.Next and the local it stores to.
                 new(SpecialCodeInstructionCases.LdArg),
                 new(SpecialCodeInstructionCases.LdLoc),
                 new(OpCodes.Callvirt, typeof(Random).GetCachedMethod<int>(nameof(Random.Next), ReflectionCache.FlagTypes.InstanceFlags)),
                 new(SpecialCodeInstructionCases.StLoc),
-            });
+            ]);
 
             // We'll define a local to cut off the jumpbacks after a certain point.
             // Don't want to actually loop forever.
             helper.DeclareLocal(typeof(int), out LocalBuilder countdown)
             .GetLabels(out IList<Label> firstLabelsToMove)
-            .Insert(new CodeInstruction[]
-            {
+            .Insert(
+            [
                 new(OpCodes.Ldc_I4_5),
                 new(OpCodes.Stloc, countdown),
-            }, withLabels: firstLabelsToMove)
+            ], withLabels: firstLabelsToMove)
             .DefineAndAttachLabel(out Label firstJumpBack)
             .Advance(3);
 
             CodeInstruction? firstLdloc = helper.CurrentInstruction.ToLdLoc();
 
-            helper.FindNext(new CodeInstructionWrapper[]
-            { // Find the block just after the while loop
+            helper.FindNext(
+            [ // Find the block just after the while loop
                 new(OpCodes.Ldsfld, typeof(Game1).GetCachedField(nameof(Game1.random), ReflectionCache.FlagTypes.StaticFlags)),
-                new(OpCodes.Callvirt, typeof(Random).GetCachedMethod(nameof(Random.NextDouble), ReflectionCache.FlagTypes.InstanceFlags, Type.EmptyTypes)),
-            })
+                new(OpCodes.Call, typeof(RandomExtensions).GetCachedMethod<Random>(nameof(RandomExtensions.NextBool), ReflectionCache.FlagTypes.StaticFlags)),
+            ])
             .GetLabels(out IList<Label> secondLabelsToMove)
             .DefineAndAttachLabel(out Label firstNoRepeat)
-            .Insert(new CodeInstruction[]
-            {
+            .Insert(
+            [
                 firstLdloc,
                 new(OpCodes.Call, typeof(VolcanoChestAdjuster).StaticMethodNamed(nameof(AdjustCommonChest))),
                 new(OpCodes.Brtrue_S, firstNoRepeat),
@@ -187,45 +206,40 @@ internal static class VolcanoChestAdjuster
                 new(OpCodes.Ldc_I4_0),
                 new(OpCodes.Ble, firstNoRepeat),
                 new(OpCodes.Br, firstJumpBack),
-            }, withLabels: secondLabelsToMove);
+            ], withLabels: secondLabelsToMove);
 
             // Okay, common chests done. Let's go find rare chests.
-            helper.FindNext(new CodeInstructionWrapper[]
-            {
-                new(OpCodes.Ldarg_3),
-                new(OpCodes.Ldc_I4_1),
-                new(OpCodes.Bne_Un),
-            })
-            .FindNext(new CodeInstructionWrapper[]
-            { // Find the call to Random.Next and the local it stores to for rare chests.
+            helper.AdvanceToStoredLabel()
+            .FindNext(
+            [ // Find the call to Random.Next and the local it stores to for rare chests.
                 new(SpecialCodeInstructionCases.LdArg),
                 new(SpecialCodeInstructionCases.LdLoc),
                 new(OpCodes.Callvirt, typeof(Random).GetCachedMethod<int>(nameof(Random.Next), ReflectionCache.FlagTypes.InstanceFlags)),
                 new(SpecialCodeInstructionCases.StLoc),
-            });
+            ]);
 
             // Repeat the declaration of a local
             helper.DeclareLocal(typeof(int), out LocalBuilder secondCountdown)
             .GetLabels(out IList<Label> thirdLabelsToMove)
-            .Insert(new CodeInstruction[]
-            {
+            .Insert(
+            [
                 new(OpCodes.Ldc_I4_5),
                 new(OpCodes.Stloc, secondCountdown),
-            }, withLabels: thirdLabelsToMove)
+            ], withLabels: thirdLabelsToMove)
             .DefineAndAttachLabel(out Label secondJumpBack)
             .Advance(3);
 
             CodeInstruction? secondLdloc = helper.CurrentInstruction.ToLdLoc();
 
-            helper.FindNext(new CodeInstructionWrapper[]
-            { // Find the block just after the while loop
+            helper.FindNext(
+            [ // Find the block just after the while loop
                 new(OpCodes.Ldsfld, typeof(Game1).GetCachedField(nameof(Game1.random), ReflectionCache.FlagTypes.StaticFlags)),
                 new(OpCodes.Callvirt, typeof(Random).GetCachedMethod(nameof(Random.NextDouble), ReflectionCache.FlagTypes.InstanceFlags, Type.EmptyTypes)),
-            })
+            ])
             .GetLabels(out IList<Label> fourthLabelsToMove)
             .DefineAndAttachLabel(out Label secondNoRepeat)
-            .Insert(new CodeInstruction[]
-            {
+            .Insert(
+            [
                 secondLdloc,
                 new(OpCodes.Call, typeof(VolcanoChestAdjuster).StaticMethodNamed(nameof(AdjustRareChest))),
                 new(OpCodes.Brtrue_S, secondNoRepeat),
@@ -237,15 +251,14 @@ internal static class VolcanoChestAdjuster
                 new(OpCodes.Ldc_I4_0),
                 new(OpCodes.Ble, secondNoRepeat),
                 new(OpCodes.Br, secondJumpBack),
-            }, withLabels: fourthLabelsToMove);
+            ], withLabels: fourthLabelsToMove);
 
             // helper.Print();
             return helper.Render();
         }
         catch (Exception ex)
         {
-            ModEntry.ModMonitor.Log($"Ran into error transpiling volcano dungeon to avoid repeat chest rewards..\n\n{ex}", LogLevel.Error);
-            original?.Snitch(ModEntry.ModMonitor);
+            ModEntry.ModMonitor.LogTranspilerError(original, ex);
         }
         return null;
     }

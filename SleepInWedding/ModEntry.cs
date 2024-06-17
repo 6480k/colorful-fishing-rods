@@ -54,7 +54,7 @@ internal sealed class ModEntry : Mod
     /// <inheritdoc cref="IGameLoopEvents.DayStarted"/>
     private void OnDayStart(object? sender, DayStartedEventArgs e)
     {
-        if (Game1.player.HasWeddingToday() && NPCCache.GetByVillagerName(Game1.player.spouse) is NPC spouse)
+        if (Game1.player.HasWeddingToday() && Game1.player.spouse is not null && NPCCache.GetByVillagerName(Game1.player.spouse) is NPC spouse)
         {
             spouse.currentMarriageDialogue.Clear();
 
@@ -65,7 +65,7 @@ internal sealed class ModEntry : Mod
             else
             {
                 spouse.CurrentDialogue.Clear();
-                spouse.CurrentDialogue.Push(new(I18n.WeddingGreeting(), spouse));
+                spouse.CurrentDialogue.Push(new(spouse, null, I18n.WeddingGreeting()));
             }
         }
     }
@@ -114,7 +114,7 @@ internal sealed class ModEntry : Mod
 
         if (Context.IsMainPlayer && Config.TryRecoverWedding)
         {
-            if (!Game1.canHaveWeddingOnDay(Game1.dayOfMonth, Game1.currentSeason))
+            if (!Game1.canHaveWeddingOnDay(Game1.dayOfMonth, Game1.season))
             {
                 return;
             }
@@ -142,7 +142,7 @@ internal sealed class ModEntry : Mod
                 else if (!added.Contains(farmer.UniqueMultiplayerID))
                 {
                     long? other = farmer.team.GetSpouse(farmer.UniqueMultiplayerID);
-                    if (other is not null)
+                    if (other is not null && farmer.team.playerIsOnline(other.Value))
                     {
                         FarmerPair team = FarmerPair.MakePair(other.Value, farmer.UniqueMultiplayerID);
                         if (farmer.team.friendshipData.TryGetValue(team, out Friendship? farmerteam)
@@ -249,7 +249,7 @@ internal sealed class ModEntry : Mod
             api.RegisterToken(
                 mod: this.ModManifest,
                 name: "IsCurrentlyWedding",
-                getValue: () => new[] { (Game1.CurrentEvent is Event evt && evt.id == Event.weddingEventId).ToString() });
+                getValue: () => new[] { (Game1.CurrentEvent is Event evt && evt.isWedding).ToString() });
         }
     }
 }

@@ -1,23 +1,26 @@
-﻿using System.Reflection;
+﻿namespace TrashDoesNotConsumeBait;
+
+using System.Reflection;
+
+using AtraCore.Framework.Internal;
+
 using AtraShared.ConstantsAndEnums;
 using AtraShared.Integrations;
 using AtraShared.MigrationManager;
 using AtraShared.Utils.Extensions;
+
 using HarmonyLib;
+
 using StardewModdingAPI.Events;
+
+using StardewValley.Tools;
+
 using AtraUtils = AtraShared.Utils.Utils;
 
-namespace TrashDoesNotConsumeBait;
-
 /// <inheritdoc/>
-internal sealed class ModEntry : Mod
+internal sealed class ModEntry : BaseMod<ModEntry>
 {
     private MigrationManager? migrator;
-
-    /// <summary>
-    /// Gets the logger for this mod.
-    /// </summary>
-    internal static IMonitor ModMonitor { get; private set; } = null!;
 
     /// <summary>
     /// Gets the config instance for this mod.
@@ -32,7 +35,7 @@ internal sealed class ModEntry : Mod
     /// <inheritdoc/>
     public override void Entry(IModHelper helper)
     {
-        ModMonitor = this.Monitor;
+        base.Entry(helper);
         GameContentHelper = helper.GameContent;
         I18n.Init(helper.Translation);
         AssetEditor.Initialize(helper.GameContent);
@@ -40,16 +43,53 @@ internal sealed class ModEntry : Mod
 
         helper.Events.GameLoop.GameLaunched += this.SetUpConfig;
         helper.Events.GameLoop.SaveLoaded += this.OnSaveLoaded;
-
-        helper.Events.Content.AssetRequested += this.OnAssetRequested;
-
-        this.Monitor.Log($"Starting up: {this.ModManifest.UniqueID} - {typeof(ModEntry).Assembly.FullName}");
+        helper.Events.Player.InventoryChanged += this.OnInventoryChange;
+        helper.Events.Content.AssetRequested += static (_, e) => AssetEditor.EditAssets(e);
 
         this.ApplyPatches(new Harmony(this.ModManifest.UniqueID));
     }
 
-    private void OnAssetRequested(object? sender, AssetRequestedEventArgs e)
-        => AssetEditor.EditAssets(e);
+    private void OnInventoryChange(object? sender, InventoryChangedEventArgs e)
+    {
+        if (!Config.EquipBaitWhileReceiving || Game1.activeClickableMenu is not null // don't do this if you're in the blasted inventory menu.
+            || !e.IsLocalPlayer || e.Added is not { } added || !added.Any(static item => item.Category == SObject.baitCategory))
+        {
+            return;
+        }
+
+        FishingRod? rod = Game1.player.CurrentTool as FishingRod ?? Game1.player.Items.FirstOrDefault(static item => item is FishingRod rod && rod.CanUseBait()) as FishingRod;
+        if (rod is null)
+        {
+            return;
+        }
+
+        SObject? currentBait = rod.GetBait();
+        for (int i = 0; i < Game1.player.Items.Count; i++)
+        {
+            SObject? proposed = Game1.player.Items[i] as SObject;
+            if (proposed is not null && proposed.Category == SObject.baitCategory && (currentBait is null || proposed.canStackWith(currentBait)))
+            {
+                this.Monitor.Log($"Adding bait {proposed.QualifiedItemId}x{proposed.Stack} to rod {rod.QualifiedItemId}");
+                if (currentBait is null)
+                {
+                    SObject? remainder = rod.attach(proposed);
+                    Game1.player.Items[i] = remainder;
+                    currentBait = rod.GetBait();
+                    continue;
+                }
+
+                int unhandled = currentBait.addToStack(proposed);
+                if (unhandled == 0)
+                {
+                    Game1.player.Items[i] = null;
+                }
+                else
+                {
+                    proposed.Stack = unhandled;
+                }
+            }
+        }
+    }
 
     /// <summary>
     /// Sets up the GMCM for this mod.

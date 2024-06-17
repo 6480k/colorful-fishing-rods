@@ -1,7 +1,11 @@
-﻿using System.Runtime.CompilerServices;
+﻿// Ignore Spelling: Api
+
+using System.Runtime.CompilerServices;
 
 using AtraBase.Toolkit;
 using AtraBase.Toolkit.Extensions;
+
+using AtraCore.Framework.Internal;
 
 using AtraShared.ConstantsAndEnums;
 using AtraShared.Integrations;
@@ -25,18 +29,17 @@ using AtraUtils = AtraShared.Utils.Utils;
 
 namespace CameraPan;
 
-// TODO: draw a big arrow pointing towards the player if the player is off screen?
-
 /// <inheritdoc />
 [SuppressMessage("StyleCop.CSharp.NamingRules", "SA1310:Field names should not contain underscore", Justification = "Constants.")]
 [SuppressMessage("StyleCop.CSharp.OrderingRules", "SA1204:Static elements should appear before instance elements", Justification = "Reviewed.")]
-[SuppressMessage("StyleCop.CSharp.OrderingRules", "SA1201:Elements should appear in the correct order", Justification = "Accessors kept near backing fields.")]
-internal sealed class ModEntry : Mod
+[SuppressMessage("StyleCop.CSharp.OrderingRules", "SA1201:Elements should appear in the correct order", Justification = StyleCopErrorConsts.AccessorsNearFields)]
+[SuppressMessage("StyleCop.CSharp.OrderingRules", "SA1202:Elements should be ordered by access", Justification = "Reviewed.")]
+internal sealed class ModEntry : BaseMod<ModEntry>
 {
     /// <summary>
-    /// The integer ID of the camera item.
+    /// The qualified ID of the camera item.
     /// </summary>
-    internal const int CAMERA_ID = 106;
+    internal const string CAMERA_ID = "(BC)106";
 
     /// <summary>
     /// The integer ID used to note hud messages from this mod.
@@ -60,7 +63,7 @@ internal sealed class ModEntry : Mod
     {
         get => enabled.Value;
         set => enabled.Value = value;
-    } 
+    }
 
     private static readonly PerScreen<bool> snapOnNextTick = new(() => true);
 
@@ -92,11 +95,6 @@ internal sealed class ModEntry : Mod
     private static StringUtils stringUtils = null!;
 
     /// <summary>
-    /// Gets the logging instance for this mod.
-    /// </summary>
-    internal static IMonitor ModMonitor { get; private set; } = null!;
-
-    /// <summary>
     /// Gets a message to draw if the camera button is hovered over.
     /// </summary>
     internal static string CameraHoverMessage { get; private set; } = string.Empty;
@@ -120,7 +118,7 @@ internal sealed class ModEntry : Mod
     public override void Entry(IModHelper helper)
     {
         I18n.Init(helper.Translation);
-        ModMonitor = this.Monitor;
+        base.Entry(helper);
         Config = AtraUtils.GetConfigOrDefault<ModConfig>(helper, this.Monitor);
         stringUtils = new StringUtils(this.Monitor);
 
@@ -167,6 +165,50 @@ internal sealed class ModEntry : Mod
             this.SetUpDetailedConfig();
             CreateOrModifyButton();
         };
+
+        // zoom
+        this.Helper.Events.Display.MenuChanged += this.OnMenuChanged;
+    }
+
+    private void OnMenuChanged(object? sender, MenuChangedEventArgs e)
+    {
+        if (e.NewMenu is not GameMenu menu)
+        {
+            return;
+        }
+
+        foreach (var page in menu.pages)
+        {
+            if (page is OptionsPage options)
+            {
+                for (int i = 0; i < options.options.Count; i++)
+                {
+                    OptionsElement choice = options.options[i];
+                    if (choice is OptionsPlusMinus plusMinus && plusMinus.whichOption == Options.zoom)
+                    {
+                        int min = (int)(Config.MinZoom * 100);
+                        int max = (int)(Config.MaxZoom * 100);
+
+                        plusMinus.options.Clear();
+                        plusMinus.displayOptions.Clear();
+
+                        int count = ((max - min) / 5) + 1;
+                        plusMinus.options.EnsureCapacity(count);
+                        plusMinus.displayOptions.EnsureCapacity(count);
+
+                        for (int c = min; c <= max; c += 5)
+                        {
+                            string s = $"{c}%";
+                            plusMinus.options.Add(s);
+                            plusMinus.displayOptions.Add(s);
+                        }
+                        Game1.options.setPlusMinusToProperValue(plusMinus);
+                        break;
+                    }
+                }
+                break;
+            }
+        }
     }
 
     private void OnClicked(object? sender, ButtonPressedEventArgs e)
@@ -200,6 +242,9 @@ internal sealed class ModEntry : Mod
         harmony.Snitch(this.Monitor, harmony.Id, transpilersOnly: true);
     }
 
+    /// <summary>
+    /// Creates or moves my little camera button.
+    /// </summary>
     internal static void CreateOrModifyButton()
     {
         if (Game1.dayTimeMoneyBox?.position is Vector2 position)
@@ -248,9 +293,10 @@ internal sealed class ModEntry : Mod
         ViewportAdjustmentPatches.SetCameraBehaviorForConfig(Config, Game1.currentLocation);
 
         bool changed = false;
-        Utility.ForAllLocations(location =>
+        Utility.ForEachLocation(location =>
         {
             changed |= Config.PerMapCameraBehavior.TryAdd(location.Name, PerMapCameraBehavior.ByIndoorsOutdoors);
+            return true; // check every location.
         });
 
         if (changed)
@@ -312,7 +358,7 @@ internal sealed class ModEntry : Mod
     internal static void Reset()
     {
         offset.Value = Point.Zero;
-        target.Value = new(Game1.player.getStandingX(), Game1.player.getStandingY());
+        target.Value = Game1.player.StandingPixel;
     }
 
     /// <summary>
@@ -414,7 +460,9 @@ internal sealed class ModEntry : Mod
         // Debug markers
         if (ConsoleCommands.DrawMarker)
         {
-            Vector2 target = Utility.ModifyCoordinatesForUIScale(Game1.GlobalToLocal(Game1.viewport, Target.ToVector2()));
+            Vector2 target = Utility.ModifyCoordinatesForUIScale(Game1.GlobalToLocal(
+                Game1.viewport,
+                Target.ToVector2()));
             e.SpriteBatch.Draw(
                 texture: AssetManager.DartsTexture,
                 position: target / Game1.options.zoomLevel,
@@ -441,7 +489,7 @@ internal sealed class ModEntry : Mod
             }
         }
 
-        if (Game1.game1.takingMapScreenshot)
+        if (Game1.game1.takingMapScreenshot || Game1.farmEvent is not null)
         {
             return;
         }
@@ -449,7 +497,7 @@ internal sealed class ModEntry : Mod
         if (enabled.Value && ViewportAdjustmentPatches.ShouldOffset()
             && this.clickAndDragScrollPosition.Value is not null && Config.ClickAndDragBehavior == ClickAndDragBehavior.AutoScroll)
         {
-            var basePos = this.clickAndDragScrollPosition.Value.Value.ToVector2();
+            Vector2 basePos = this.clickAndDragScrollPosition.Value.Value.ToVector2();
             foreach (Direction direction in DirectionExtensions.Cardinal)
             {
                 e.SpriteBatch.Draw(
@@ -465,7 +513,7 @@ internal sealed class ModEntry : Mod
             }
         }
 
-        if (Game1.CurrentEvent is null)
+        if (Game1.CurrentEvent is null && Game1.displayHUD)
         {
             CameraButton.Value?.draw(e.SpriteBatch, enabled.Value && ViewportAdjustmentPatches.ShouldOffset() ? Color.White : Color.Gray, 0.99f);
             int mouseX = Game1.getMouseX(true);
@@ -534,7 +582,7 @@ internal sealed class ModEntry : Mod
             return;
         }
 
-        arrowPos = Utility.snapToInt( Utility.ModifyCoordinatesForUIScale(arrowPos));
+        arrowPos = Utility.snapToInt(Utility.ModifyCoordinatesForUIScale(arrowPos));
 
         s.Draw(
             texture: AssetManager.ArrowTexture,
@@ -571,7 +619,7 @@ internal sealed class ModEntry : Mod
 
         if (Config.ToggleBehavior == ToggleBehavior.Camera)
         {
-            enabled.Value = Game1.player.ActiveObject is SObject obj && obj.bigCraftable.Value && obj.ParentSheetIndex == CAMERA_ID;
+            enabled.Value = Game1.player.ActiveObject.QualifiedItemId == CAMERA_ID;
         }
 
         int xAdjustment = offset.Value.X;
@@ -671,8 +719,10 @@ internal sealed class ModEntry : Mod
 
         offset.Value = new(xAdjustment, yAdjustment);
 
-        int x = Game1.player.getStandingX() + xAdjustment;
-        int y = Game1.player.getStandingY() + yAdjustment;
+        Point standingPoint = Game1.player.StandingPixel;
+
+        int x = standingPoint.X + xAdjustment;
+        int y = standingPoint.Y + yAdjustment;
 
         if (SnapOnNextTick)
         {

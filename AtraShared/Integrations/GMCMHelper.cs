@@ -1,14 +1,21 @@
-﻿using System.Collections.Concurrent;
+﻿// Ignore Spelling: tooltip Keybind
+
+using System.Collections.Concurrent;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 
 using AtraBase.Collections;
+using AtraBase.Toolkit;
+
 using AtraShared.Integrations.GMCMAttributes;
 using AtraShared.Integrations.Interfaces;
 using AtraShared.Utils;
 using AtraShared.Utils.Extensions;
+
 using CommunityToolkit.Diagnostics;
+
 using Microsoft.Xna.Framework;
+
 using StardewModdingAPI.Utilities;
 
 namespace AtraShared.Integrations;
@@ -34,14 +41,14 @@ public sealed class GMCMHelper : IntegrationHelper
 
 #region cache
 
-    [SuppressMessage("StyleCop.CSharp.NamingRules", "SA1313:Parameter names should begin with lower-case letter", Justification = "Stylecop doesn't understand records.")]
+    [SuppressMessage("StyleCop.CSharp.NamingRules", "SA1313:Parameter names should begin with lower-case letter", Justification = StyleCopErrorConsts.IsRecord)]
     private readonly record struct CacheKey(Type Config, Type TEnum);
 
     private static readonly ConcurrentDictionary<CacheKey, MethodInfo> enumCache = new();
 #endregion
 
     private readonly IManifest manifest;
-    private readonly List<string> pages = new();
+    private readonly List<string> pages = [];
 
     private IGenericModConfigMenuApi? modMenuApi;
     private IGMCMOptionsAPI? gmcmOptionsApi;
@@ -403,7 +410,7 @@ public sealed class GMCMHelper : IntegrationHelper
                 .First()
                 .MakeGenericMethod(typeof(TModConfig), tEnum);
         }
-        realized.Invoke(this, new object?[] { property, getConfig, fieldID });
+        realized.Invoke(this, [property, getConfig, fieldID]);
 
         return this;
     }
@@ -948,8 +955,8 @@ public sealed class GMCMHelper : IntegrationHelper
     [MethodImpl(MethodImplOptions.AggressiveOptimization)]
     public GMCMHelper GenerateDefaultGMCM<TModConfig>(Func<TModConfig> getConfig)
     {
-        List<PropertyInfo> uncategorized = new();
-        DefaultDict<(int order, string name), List<PropertyInfo>> categories = new();
+        List<PropertyInfo> uncategorized = [];
+        DefaultDict<(int order, string name), List<PropertyInfo>> categories = [];
 
         // look through, assign to categories.
         foreach (PropertyInfo? property in typeof(TModConfig).GetProperties())

@@ -27,9 +27,9 @@ internal static class BusStopPatch
     private static bool ShouldAllowBus(GameLocation loc)
     {
         Vector2 bustile = new(11f, 10f);
-        foreach(NPC npc in loc.getCharacters())
+        foreach(NPC npc in loc.characters)
         {
-            if (npc.isVillager() && npc.getTileLocation().Equals(bustile))
+            if (npc.IsVillager && npc.Tile.Equals(bustile))
             {
                 ModEntry.ModMonitor.DebugOnlyLog($"Subbing in {npc.Name} as the bus driver.", LogLevel.Info);
                 return true;
@@ -52,39 +52,38 @@ internal static class BusStopPatch
         try
         {
             ILHelper helper = new(original, instructions, ModEntry.ModMonitor, gen);
-            helper.FindNext(new CodeInstructionWrapper[]
-                {
+            helper.FindNext(
+                [
                     new(OpCodes.Ldstr, "Pam"),
                     new(OpCodes.Ldc_I4_1),
                     new(OpCodes.Ldc_I4_0),
                     new(OpCodes.Call),
-                })
-                .FindNext(new CodeInstructionWrapper[]
-                {
+                ])
+                .FindNext(
+                [
                     new(OpCodes.Ldarg_0),
                     new(OpCodes.Ldfld),
                     new(SpecialCodeInstructionCases.LdLoc),
                     new(OpCodes.Callvirt),
                     new(OpCodes.Brfalse),
-                })
-                .RemoveIncluding(new CodeInstructionWrapper[]
-                {
+                ])
+                .RemoveIncluding(
+                [
                     new (OpCodes.Ldc_R4, 11),
                     new (OpCodes.Ldc_R4, 10),
                     new (OpCodes.Newobj),
-                    new (OpCodes.Call, typeof(Vector2).GetCachedMethod(nameof(Vector2.Equals), ReflectionCache.FlagTypes.InstanceFlags, new Type[] { typeof(Vector2) })),
-                })
-                .Insert(new CodeInstruction[]
-                {
+                    new (OpCodes.Call, typeof(Vector2).GetCachedMethod(nameof(Vector2.Equals), ReflectionCache.FlagTypes.InstanceFlags, [typeof(Vector2)])),
+                ])
+                .Insert(
+                [
                     new (OpCodes.Ldarg_0),
-                    new (OpCodes.Call, typeof(BusStopPatch).GetCachedMethod(nameof(BusStopPatch.ShouldAllowBus), ReflectionCache.FlagTypes.StaticFlags)),
-                });
+                    new (OpCodes.Call, typeof(BusStopPatch).GetCachedMethod(nameof(ShouldAllowBus), ReflectionCache.FlagTypes.StaticFlags)),
+                ]);
             return helper.Render();
         }
         catch (Exception ex)
         {
-            ModEntry.ModMonitor.Log($"Failed when trying to apply transpiler for {original.FullDescription()}\n\n{ex}", LogLevel.Error);
-            original.Snitch(ModEntry.ModMonitor);
+            ModEntry.ModMonitor.LogTranspilerError(original, ex);
             return null;
         }
     }

@@ -1,0 +1,21 @@
+{
+    "Changes": [
+        {
+            "Action": "EditData",
+            "Target": "Data/TriggerActions",
+            "Entries": {
+                "atravita.Dialogue.MailReset": {
+                    "Id": "atravita.Dialogue.MailReset",
+                    "Trigger": "DayStarted",
+                    "Actions": [
+                        "RemoveMail Current atravitaDialogueLeahBeach all",
+                        "RemoveMail Current atravitaGusNewYear all",
+                        "RemoveMail Current atravitaGusExpectingGift all",
+                    ],
+                    "MarkActionApplied": false,
+                    "Condition": "DAY_OF_WEEK Monday"
+                }
+            }
+        }
+    ]
+}

@@ -1,17 +1,16 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <Import Project="..\csproj_common" />
   <Import Project="..\AtraBase\AtraBase\AtraBase.projitems" Label="Shared" />
   <Import Project="..\AtraShared\AtraShared.projitems" Label="Shared" />
 
   <PropertyGroup>
-    <TargetFramework>net5.0</TargetFramework>
     <EnableHarmony>True</EnableHarmony>
     <ImplicitUsings>enable</ImplicitUsings>
     <Version_AppendConfiguration>false</Version_AppendConfiguration>
   </PropertyGroup>
 
   <PropertyGroup>
-    <Version>0.2.3</Version>
+    <Version>0.3.0</Version>
     <Name>AtraCore</Name>
     <Description>A core library mod some of my other mods depend on.</Description>
     <UpdateKeys>Nexus:12932</UpdateKeys>
@@ -20,9 +19,9 @@
   <PropertyGroup>
     <BundleExtraAssemblies>System,ThirdParty</BundleExtraAssemblies>
     <IgnoreModFilePatterns>
-         \.xcf$, <!-- GIMP files-->
+         $(IgnoreModFilePatterns),
          System.*.dll$, <!-- System would bundle these.-->
-         ^Microsoft.(?!.*(Toolkit.Diagnostics.dll)), <!-- Everyone but MS.Toolkit.Diagnostics-->
+         ^Microsoft.(?!.*(Toolkit.Diagnostics.dll|Msagl)), <!-- Everyone but MS.Toolkit.Diagnostics and MSagl-->
          ^runtimes[/\\].*, 
          .*[/\\]Microsoft.*, <!-- CodeDiagnostics in a bunch of languages?-->
          ^JetBrains,<!-- Should never be bundled.-->
@@ -32,17 +31,17 @@
 
   <PropertyGroup>
     <TranslationClassBuilder_AddGetByKey>true</TranslationClassBuilder_AddGetByKey>
-    <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="CommunityToolkit.Diagnostics" Version="8.0.0" />
-    <PackageReference Include="FastExpressionCompiler.LightExpression" Version="3.3.3" />
+    <PackageReference Include="CommunityToolkit.Diagnostics" Version="8.2.2" />
+    <PackageReference Include="FastExpressionCompiler.LightExpression" Version="4.0.1" />
     <PackageReference Include="LinqFasterer" Version="2.1.0" />
-    <PackageReference Include="morelinq" Version="4.0.0" />
+    <PackageReference Include="morelinq" Version="4.1.0" />
     <PackageReference Include="Microsoft.IO.RecyclableMemoryStream" Version="2.3.2" />
     <PackageReference Include="SkiaSharp" Version="2.88.0" />
     <PackageReference Include="SkiaSharp.NativeAssets.Linux" Version="2.88.0" />
+    <Reference Include="Newtonsoft.Json" HintPath="$(GamePath)\smapi-internal\Newtonsoft.Json.dll" private="false" />
   </ItemGroup>
 
   <ItemGroup>
@@ -60,6 +59,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Update="JetBrains.Annotations" Version="2023.3.0" />
     <PackageReference Update="Leclair.Stardew.ModManifestBuilder" Version="2.1.0" />
   </ItemGroup>
 

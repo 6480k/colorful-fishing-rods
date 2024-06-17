@@ -1,0 +1,49 @@
+{
+    "$schema": "https://smapi.io/schemas/content-patcher.json",
+    "Format": "1.28.0",
+    "ConfigSchema": {
+        "SpecialOrders": {
+            "AllowValues": "true, false",
+            "Default": "true"
+        }
+    },
+    "Changes": [
+        {
+            "Action": "Load",
+            "FromFile": "assets/spritesheet.png",
+            "Target": "Mods/atravita/MoreFertilizersObjects"
+        },
+        {
+            "Action": "Include",
+            "FromFile": "assets/machines.json"
+        },
+        {
+            "Action": "Include",
+            "FromFile": "assets/mail.json"
+        },
+        {
+            "Action": "Include",
+            "FromFile": "assets/museum.json",
+        },
+        {
+            "Action": "Include",
+            "FromFile": "assets/objects.json",
+        },
+        {
+            "Action": "Include",
+            "FromFile": "assets/phonecalls.json"
+        },
+        {
+            "Action": "Include",
+            "FromFile": "assets/shopdata.json",
+        },
+        {
+            "Action": "Include",
+            "FromFile": "assets/special_orders.json",
+            "When": {
+                "SpecialOrders": true,
+                "HasReadLetter: anyPlayer": "seenBoatJourney"
+            }
+        }
+    ]
+}
