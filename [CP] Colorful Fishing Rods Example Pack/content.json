@@ -5,11 +5,11 @@
 			"Action": "EditData",
 			"Target": "Mods/ColorfulFishingRods",
 			"Entries": {
-				"(T)IridiumRod": { //qualified ID of fishing rod
+				"(T)IridiumRod": { //qualified ID of fishing rod item
 					//8 bit RGBA
-					"R": 255,
-					"G": 128,
-					"B": 128,
+					"R": 0,
+					"G": 255,
+					"B": 0,
 					"A": 255
 				}
 			}
