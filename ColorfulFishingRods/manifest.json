@@ -10,11 +10,12 @@
   "UniqueID": "atravita.ColorfulFishingRods",
   "Name": "Colorful Fishing Rods",
   "Author": "atravita",
-  "Version": "0.1.0-Debug",
+  "Version": "1.0.0-Debug",
   "Description": "Lets you override the colors of fishing rods.",
   "MinimumApiVersion": "4.0.7",
   "EntryDll": "ColorfulFishingRods.dll",
   "UpdateKeys": [
+    "Nexus: 25258",
     "-1"
   ]
 }
